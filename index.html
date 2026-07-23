@@ -20,84 +20,42 @@
             border-radius: 8px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
-        h1 {
-            text-align: center;
-            color: #2c3e50;
-            margin-bottom: 20px;
-        }
-        /* 同期ステータス表示 */
+        h1 { text-align: center; color: #2c3e50; margin-bottom: 10px; }
         .sync-status {
-            text-align: center;
-            font-size: 13px;
-            color: #64748b;
-            margin-bottom: 20px;
-            font-weight: bold;
+            text-align: center; font-size: 13px; color: #64748b; margin-bottom: 15px; font-weight: bold;
         }
-        .form-section {
-            background: #eef2f3;
-            padding: 20px;
+        
+        /* 認証・ログインバナー */
+        .auth-banner {
+            background-color: #fffbebf8;
+            border: 1px solid #fcd34d;
+            padding: 12px 20px;
             border-radius: 6px;
-            margin-bottom: 25px;
-            border-left: 5px solid #27ae60;
-            transition: border-color 0.3s;
-        }
-        .form-section.edit-mode {
-            border-left: 5px solid #f1c40f;
-            background: #fdfefe;
-        }
-        .form-title {
-            font-weight: bold;
-            font-size: 16px;
-            margin-bottom: 15px;
-            color: #2c3e50;
+            margin-bottom: 20px;
             display: flex;
-            justify-content: space-between;
-        }
-        .form-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 15px;
-            margin-bottom: 15px;
-        }
-        .form-group {
-            display: flex;
-            flex-direction: column;
-        }
-        .form-group label {
-            font-size: 14px;
-            font-weight: bold;
-            margin-bottom: 5px;
-            color: #475569;
-        }
-        input, select, textarea, button {
-            padding: 10px;
-            font-size: 15px;
-            border: 1px solid #cbd5e1;
-            border-radius: 4px;
-            box-sizing: border-box;
-        }
-        textarea {
-            resize: vertical;
-            height: 40px;
-        }
-        .btn-container {
-            display: flex;
-            justify-content: space-between;
             align-items: center;
+            justify-content: space-between;
             flex-wrap: wrap;
             gap: 10px;
-            margin-top: 15px;
         }
-        .action-btns {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
+        .auth-text { font-size: 13px; color: #92400e; font-weight: bold; }
+        .btn-auth {
+            background-color: #d97706; color: white; border: none; padding: 8px 16px; border-radius: 4px; font-size: 13px; font-weight: bold; cursor: pointer;
         }
-        button {
-            font-weight: bold;
-            cursor: pointer;
-            transition: background 0.2s, opacity 0.2s;
+
+        .form-section {
+            background: #eef2f3; padding: 20px; border-radius: 6px; margin-bottom: 25px; border-left: 5px solid #27ae60; transition: border-color 0.3s;
         }
+        .form-section.edit-mode { border-left: 5px solid #f1c40f; background: #fdfefe; }
+        .form-title { font-weight: bold; font-size: 16px; margin-bottom: 15px; color: #2c3e50; display: flex; justify-content: space-between; }
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 15px; }
+        .form-group { display: flex; flex-direction: column; }
+        .form-group label { font-size: 14px; font-weight: bold; margin-bottom: 5px; color: #475569; }
+        input, select, textarea, button { padding: 10px; font-size: 15px; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box; }
+        textarea { resize: vertical; height: 40px; }
+        .btn-container { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 15px; }
+        .action-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+        button { font-weight: bold; cursor: pointer; transition: background 0.2s, opacity 0.2s; }
         button:hover { opacity: 0.9; }
         .btn-add { background-color: #27ae60; color: white; border: none; padding: 12px 24px; }
         .btn-save-edit { background-color: #f1c40f; color: #2c3e50; border: none; padding: 12px 24px; }
@@ -109,142 +67,43 @@
         .btn-print { background-color: #9b59b6; color: white; border: none; }
         .btn-copy { background-color: #e67e22; color: white; border: none; }
         
-        .file-input-wrapper {
-            position: relative;
-            overflow: hidden;
-            display: inline-block;
-        }
-        .file-input-wrapper input[type=file] {
-            position: absolute; left: 0; top: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
-        }
+        .file-input-wrapper { position: relative; overflow: hidden; display: inline-block; }
+        .file-input-wrapper input[type=file] { position: absolute; left: 0; top: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
 
-        /* 集計パネル */
-        .summary-section {
-            background-color: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 6px;
-            padding: 20px;
-            margin-bottom: 25px;
-        }
-        .summary-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 15px;
-            margin-bottom: 15px;
-            border-bottom: 2px solid #e2e8f0;
-            padding-bottom: 12px;
-        }
-        .summary-title {
-            font-size: 16px;
-            font-weight: bold;
-            color: #1e293b;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .summary-control {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            flex-wrap: wrap;
-        }
-        .summary-control label {
-            font-size: 14px;
-            font-weight: bold;
-            color: #475569;
-        }
-        .select-summary-key {
-            padding: 6px 12px;
-            font-size: 14px;
-            border: 1px solid #cbd5e1;
-            background-color: #fff;
-            cursor: pointer;
-        }
-        .summary-grid {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-        .summary-card {
-            background: #fff;
-            border: 1px solid #cbd5e1;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 14px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-            cursor: pointer;
-            user-select: none;
-            transition: all 0.2s;
-        }
+        .summary-section { background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 20px; margin-bottom: 25px; }
+        .summary-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 15px; border-bottom: 2px solid #e2e8f0; padding-bottom: 12px; }
+        .summary-title { font-size: 16px; font-weight: bold; color: #1e293b; display: flex; align-items: center; gap: 8px; }
+        .summary-control { display: flex; align-items: center; gap: 15px; flex-wrap: wrap; }
+        .summary-control label { font-size: 14px; font-weight: bold; color: #475569; }
+        .select-summary-key { padding: 6px 12px; font-size: 14px; border: 1px solid #cbd5e1; background-color: #fff; cursor: pointer; }
+        .summary-grid { display: flex; flex-wrap: wrap; gap: 10px; }
+        .summary-card { background: #fff; border: 1px solid #cbd5e1; padding: 8px 16px; border-radius: 20px; font-size: 14px; display: flex; align-items: center; gap: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); cursor: pointer; user-select: none; transition: all 0.2s; }
         .summary-card:hover { border-color: #27ae60; background-color: #f0fdf4; transform: translateY(-1px); }
         .summary-card.active { border-color: #27ae60; background-color: #d1fae5; }
-        .summary-card .count {
-            background: #e2e8f0; color: #334155; font-weight: bold; padding: 2px 8px; border-radius: 10px; font-size: 12px;
-        }
+        .summary-card .count { background: #e2e8f0; color: #334155; font-weight: bold; padding: 2px 8px; border-radius: 10px; font-size: 12px; }
         .summary-card.active .count { background-color: #10b981; color: white; }
 
-        .btn-clear-filter {
-            background-color: #e2e8f0; border: 1px solid #cbd5e1; color: #475569; font-size: 13px; padding: 6px 12px; border-radius: 4px; margin-left: 10px;
-        }
-        .display-option {
-            display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: bold; color: #475569; cursor: pointer;
-        }
+        .btn-clear-filter { background-color: #e2e8f0; border: 1px solid #cbd5e1; color: #475569; font-size: 13px; padding: 6px 12px; border-radius: 4px; margin-left: 10px; }
+        .display-option { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: bold; color: #475569; cursor: pointer; }
 
-        /* 表示モードコントロールバー */
-        .view-mode-bar {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 15px;
-            background: #e2e8f0;
-            padding: 10px 15px;
-            border-radius: 6px;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
+        .view-mode-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; background: #e2e8f0; padding: 10px 15px; border-radius: 6px; flex-wrap: wrap; gap: 10px; }
         .view-mode-title { font-weight: bold; color: #334155; font-size: 14px; }
         .view-btn-group { display: flex; gap: 5px; }
-        .btn-view-mode {
-            padding: 6px 14px; font-size: 13px; border: 1px solid #cbd5e1; background-color: #fff; color: #475569; border-radius: 4px; cursor: pointer;
-        }
+        .btn-view-mode { padding: 6px 14px; font-size: 13px; border: 1px solid #cbd5e1; background-color: #fff; color: #475569; border-radius: 4px; cursor: pointer; }
         .btn-view-mode.active { background-color: #34495e; color: #fff; border-color: #34495e; }
 
-        /* 一括操作アクションバー */
-        .bulk-action-bar {
-            background-color: #ebf8ff;
-            border: 2px solid #3182ce;
-            padding: 12px 20px;
-            border-radius: 6px;
-            margin-bottom: 15px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
+        .bulk-action-bar { background-color: #ebf8ff; border: 2px solid #3182ce; padding: 12px 20px; border-radius: 6px; margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
         .bulk-title { font-weight: bold; color: #2b6cb0; font-size: 15px; }
         .bulk-btns { display: flex; gap: 8px; flex-wrap: wrap; }
         .btn-bulk-used { background-color: #e67e22; color: white; border: none; padding: 8px 14px; border-radius: 4px; }
         .btn-bulk-edit { background-color: #3182ce; color: white; border: none; padding: 8px 14px; border-radius: 4px; }
         .btn-bulk-del { background-color: #e53e3e; color: white; border: none; padding: 8px 14px; border-radius: 4px; }
 
-        /* グループ見出し */
-        .group-header-row {
-            background-color: #f1f5f9 !important;
-            font-weight: bold; color: #1e293b; font-size: 15px; cursor: pointer; user-select: none; transition: background-color 0.2s;
-        }
+        .group-header-row { background-color: #f1f5f9 !important; font-weight: bold; color: #1e293b; font-size: 15px; cursor: pointer; user-select: none; transition: background-color 0.2s; }
         .group-header-row:hover { background-color: #e2e8f0 !important; }
-        .group-header-cell {
-            padding: 12px 15px !important; border-left: 5px solid #34495e; display: flex; align-items: center; justify-content: space-between;
-        }
+        .group-header-cell { padding: 12px 15px !important; border-left: 5px solid #34495e; display: flex; align-items: center; justify-content: space-between; }
         .group-icon { font-size: 12px; margin-right: 8px; color: #64748b; }
 
-        /* テーブル設定 */
         .table-responsive { overflow-x: auto; margin-top: 10px; }
         table { width: 100%; border-collapse: collapse; min-width: 1400px; }
         th, td { padding: 12px; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 14px; }
@@ -266,15 +125,8 @@
         
         .no-data { text-align: center; color: #94a3b8; padding: 30px; }
 
-        /* モーダルポップアップ */
-        .modal-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.5); display: flex; justify-content: center; align-items: center; z-index: 1000;
-        }
-        .modal-content {
-            background: #fff; padding: 25px; border-radius: 8px; width: 90%; max-width: 500px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2); max-height: 90vh; overflow-y: auto;
-        }
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); display: flex; justify-content: center; align-items: center; z-index: 1000; }
+        .modal-content { background: #fff; padding: 25px; border-radius: 8px; width: 90%; max-width: 500px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); max-height: 90vh; overflow-y: auto; }
         .modal-content h3 { margin-top: 0; color: #2c3e50; border-bottom: 2px solid #3182ce; padding-bottom: 8px; }
         .modal-form-group { margin-bottom: 12px; display: flex; flex-direction: column; }
         .modal-form-group label { font-weight: bold; font-size: 13px; margin-bottom: 4px; color: #475569; }
@@ -285,7 +137,7 @@
         @media print {
             body { background-color: #fff; padding: 0; }
             .container { box-shadow: none; padding: 0; max-width: 100%; }
-            .form-section, .no-print, th:last-child, td:last-child, .summary-control, .btn-clear-filter, .view-mode-bar, .bulk-action-bar, th:first-child, td:first-child {
+            .form-section, .no-print, th:last-child, td:last-child, .summary-control, .btn-clear-filter, .view-mode-bar, .bulk-action-bar, th:first-child, td:first-child, .auth-banner {
                 display: none !important;
             }
             .summary-section { border: 1px solid #999 !important; background: #fff !important; margin-bottom: 15px; }
@@ -304,7 +156,13 @@
 
 <div class="container">
     <h1>営業所 在庫・撤去品管理</h1>
-    <div id="syncStatus" class="sync-status">☁️ クラウドと同期中...</div>
+    <div id="syncStatus" class="sync-status">☁️ クラウド同期準備中...</div>
+
+    <!-- 💡 初回認証案内バナー -->
+    <div class="auth-banner no-print" id="authBanner">
+        <div class="auth-text">🔐 スマホ・PCで初めて開く場合、または同期エラーが出る場合は認証が必要です。</div>
+        <button class="btn-auth" onclick="authenticateGoogle()">会社アカウントで認証を開く</button>
+    </div>
 
     <!-- データ入力フォーム -->
     <div class="form-section" id="formSection">
@@ -531,7 +389,6 @@
 </div>
 
 <script>
-    // 🌐 スプレッドシート連携用GAS URL
     const GAS_URL = "https://script.google.com/a/macros/suntac.jp/s/AKfycbwmp9YXGaMB6V95HXagj34iiCJAzM1zHhLH9jgNIgXiBqtrSssMk264A0piYVu13LQP/exec";
 
     let inventory = [];
@@ -542,15 +399,22 @@
     let expandedGroups = {};
     let selectedIds = new Set();
 
-    // ☁️ クラウド（Googleスプレッドシート）から最新データを読み込む
+    // 🔐 別タブでGASを開いて認証を通す関数
+    function authenticateGoogle() {
+        window.open(GAS_URL, '_blank');
+        alert("開いたタブで会社のGoogleアカウントでログイン/アクセスを許可してください。\n完了後、この画面に戻り「最新データに更新」を押してください。");
+    }
+
+    // ☁️ クラウドからデータ取得
     async function fetchCloudData() {
         const syncStatus = document.getElementById("syncStatus");
         syncStatus.innerText = "☁️ スプレッドシートからデータを取得中...";
         try {
-            const response = await fetch(GAS_URL);
+            const response = await fetch(GAS_URL, { redirect: 'follow' });
+            if (!response.ok) throw new Error("HTTP error " + response.status);
+            
             const data = await response.json();
             
-            // データ変換
             inventory = data.map(item => ({
                 id: parseInt(item["管理ID"]) || 0,
                 company: item["法人名"] || "",
@@ -570,26 +434,26 @@
             renderInventory();
         } catch (error) {
             console.error("クラウド同期エラー:", error);
-            syncStatus.innerText = "⚠️ クラウド読み込み失敗（ローカルデータを使用中）";
+            syncStatus.innerText = "⚠️ クラウド未認証または読み込み失敗（黄色い認証ボタンをお試しください）";
             inventory = JSON.parse(localStorage.getItem('office_inventory')) || [];
             nextId = inventory.length > 0 ? Math.max(...inventory.map(item => item.id)) + 1 : 1;
             renderInventory();
         }
     }
 
-    // ☁️ クラウドへ全データを最新状態として一括送信（自動保存）
+    // ☁️ クラウドへ保存
     async function saveCloudData() {
         const syncStatus = document.getElementById("syncStatus");
         syncStatus.innerText = "☁️ クラウドへ自動保存中...";
         
-        // ローカルストレージにも予備保存
         localStorage.setItem('office_inventory', JSON.stringify(inventory));
 
         try {
             await fetch(GAS_URL, {
                 method: "POST",
                 headers: { "Content-Type": "text/plain" },
-                body: JSON.stringify(inventory)
+                body: JSON.stringify(inventory),
+                redirect: 'follow'
             });
             syncStatus.innerText = "✅ クラウドへ保存完了";
         } catch (error) {
@@ -624,22 +488,15 @@
         checkboxes.forEach(cb => {
             cb.checked = masterCheckbox.checked;
             const id = parseInt(cb.dataset.id);
-            if (masterCheckbox.checked) {
-                selectedIds.add(id);
-            } else {
-                selectedIds.delete(id);
-            }
+            if (masterCheckbox.checked) { selectedIds.add(id); } 
+            else { selectedIds.delete(id); }
         });
         updateBulkBar();
     }
 
     function handleCheckboxChange(cb, id) {
-        if (cb.checked) {
-            selectedIds.add(id);
-        } else {
-            selectedIds.delete(id);
-            document.getElementById('selectAllCheckbox').checked = false;
-        }
+        if (cb.checked) { selectedIds.add(id); } 
+        else { selectedIds.delete(id); document.getElementById('selectAllCheckbox').checked = false; }
         updateBulkBar();
     }
 
@@ -647,12 +504,7 @@
         const bar = document.getElementById('bulkActionBar');
         const countSpan = document.getElementById('selectedCount');
         countSpan.innerText = selectedIds.size;
-
-        if (selectedIds.size > 0) {
-            bar.style.display = 'flex';
-        } else {
-            bar.style.display = 'none';
-        }
+        bar.style.display = selectedIds.size > 0 ? 'flex' : 'none';
     }
 
     function renderInventory() {
@@ -664,9 +516,7 @@
         tbody.innerHTML = "";
 
         let filteredList = inventory;
-        if (!showUsed) {
-            filteredList = inventory.filter(item => item.plan !== "使用済み");
-        }
+        if (!showUsed) { filteredList = inventory.filter(item => item.plan !== "使用済み"); }
 
         if (activeFilterValue !== null) {
             filteredList = filteredList.filter(item => {
@@ -721,15 +571,11 @@
                     tbody.appendChild(headerTr);
 
                     if (isOpen) {
-                        groups[gName].forEach(item => {
-                            tbody.appendChild(createRowElement(item));
-                        });
+                        groups[gName].forEach(item => { tbody.appendChild(createRowElement(item)); });
                     }
                 });
             } else {
-                filteredList.forEach(item => {
-                    tbody.appendChild(createRowElement(item));
-                });
+                filteredList.forEach(item => { tbody.appendChild(createRowElement(item)); });
             }
         }
         
@@ -789,16 +635,10 @@
         container.innerHTML = "";
 
         let baseList = inventory;
-        if (!showUsed) {
-            baseList = inventory.filter(item => item.plan !== "使用済み");
-        }
+        if (!showUsed) { baseList = inventory.filter(item => item.plan !== "使用済み"); }
         totalSpan.innerText = baseList.length;
 
-        if (activeFilterValue !== null) {
-            filterBtn.style.display = "inline-block";
-        } else {
-            filterBtn.style.display = "none";
-        }
+        filterBtn.style.display = activeFilterValue !== null ? "inline-block" : "none";
 
         if (baseList.length === 0) {
             container.innerHTML = `<span style="color:#94a3b8; font-size:14px;">対象データがありません。</span>`;
@@ -825,9 +665,7 @@
         sortedItems.forEach(([label, count]) => {
             const card = document.createElement("div");
             card.className = "summary-card";
-            if (activeFilterValue === label) {
-                card.classList.add("active");
-            }
+            if (activeFilterValue === label) card.classList.add("active");
             card.innerHTML = `
                 <span class="name"><strong>${escapeHtml(label)}</strong></span>
                 <span class="count">${count} 件</span>
@@ -857,9 +695,7 @@
         document.getElementById("usedModal").style.display = "flex";
     }
 
-    function closeUsedModal() {
-        document.getElementById("usedModal").style.display = "none";
-    }
+    function closeUsedModal() { document.getElementById("usedModal").style.display = "none"; }
 
     function saveUsedModal() {
         const isBulk = document.getElementById("isBulkUsed").value === "true";
@@ -887,7 +723,7 @@
         }
         closeUsedModal();
         renderInventory();
-        saveCloudData(); // クラウドに同期
+        saveCloudData();
     }
 
     function openBulkEditModal() {
@@ -902,9 +738,7 @@
         document.getElementById("bulkEditModal").style.display = "flex";
     }
 
-    function closeBulkEditModal() {
-        document.getElementById("bulkEditModal").style.display = "none";
-    }
+    function closeBulkEditModal() { document.getElementById("bulkEditModal").style.display = "none"; }
 
     function executeBulkEdit() {
         const company = document.getElementById("bulkCompany").value.trim();
@@ -933,7 +767,7 @@
         selectedIds.clear();
         closeBulkEditModal();
         renderInventory();
-        saveCloudData(); // クラウドに同期
+        saveCloudData();
     }
 
     function bulkDelete() {
@@ -942,29 +776,18 @@
             inventory = inventory.filter(item => !selectedIds.has(item.id));
             selectedIds.clear();
             renderInventory();
-            saveCloudData(); // クラウドに同期
+            saveCloudData();
         }
     }
 
     function setFilter(value) {
-        if (activeFilterValue === value) { activeFilterValue = null; } 
-        else { activeFilterValue = value; }
+        activeFilterValue = activeFilterValue === value ? null : value;
         renderInventory();
     }
 
-    function clearFilter() {
-        activeFilterValue = null;
-        renderInventory();
-    }
-
-    function handleKeyChange() {
-        activeFilterValue = null;
-        renderInventory();
-    }
-
-    function handleSubmit() {
-        if (isEditing) { saveEdit(); } else { addItem(); }
-    }
+    function clearFilter() { activeFilterValue = null; renderInventory(); }
+    function handleKeyChange() { activeFilterValue = null; renderInventory(); }
+    function handleSubmit() { if (isEditing) { saveEdit(); } else { addItem(); } }
 
     function addItem() {
         const company = document.getElementById("companyName").value.trim();
@@ -975,14 +798,10 @@
         const date = document.getElementById("removeDate").value;
         const plan = document.getElementById("usagePlan").value;
         const notes = document.getElementById("itemNotes").value.trim();
-        
         const usedDate = document.getElementById("usedDate").value;
         const usedLocation = document.getElementById("usedLocation").value.trim();
 
-        if (name === "") {
-            alert("商品名は必須入力です。");
-            return;
-        }
+        if (name === "") { alert("商品名は必須入力です。"); return; }
 
         inventory.push({
             id: nextId++, company: company, name: name, category: category, model: model,
@@ -994,7 +813,7 @@
 
         clearForm();
         renderInventory();
-        saveCloudData(); // クラウドに同期
+        saveCloudData();
     }
 
     function startEdit(id) {
@@ -1010,7 +829,6 @@
         document.getElementById("removeDate").value = item.date;
         document.getElementById("usagePlan").value = item.plan;
         document.getElementById("itemNotes").value = item.notes;
-        
         document.getElementById("usedDate").value = item.usedDate || "";
         document.getElementById("usedLocation").value = item.usedLocation || "";
 
@@ -1038,14 +856,10 @@
         const date = document.getElementById("removeDate").value;
         const plan = document.getElementById("usagePlan").value;
         const notes = document.getElementById("itemNotes").value.trim();
-        
         const usedDate = document.getElementById("usedDate").value;
         const usedLocation = document.getElementById("usedLocation").value.trim();
 
-        if (name === "") {
-            alert("商品名は必須入力です。");
-            return;
-        }
+        if (name === "") { alert("商品名は必須入力です。"); return; }
 
         const itemIndex = inventory.findIndex(i => i.id === id);
         if (itemIndex > -1) {
@@ -1059,21 +873,18 @@
             alert("編集内容を保存しました。");
             cancelEdit();
             renderInventory();
-            saveCloudData(); // クラウドに同期
+            saveCloudData();
         }
     }
 
     function cancelEdit() {
         isEditing = false;
         clearForm();
-        
         document.getElementById("formSection").classList.remove("edit-mode");
         document.getElementById("formActionTitle").innerText = "📋 新規商品・撤去品登録";
-        
         const btnSubmit = document.getElementById("btnSubmit");
         btnSubmit.innerText = "この内容で登録する";
         btnSubmit.className = "btn-add";
-
         document.getElementById("btnCancelEdit").style.display = "none";
         toggleFormUsedFields();
     }
@@ -1092,24 +903,20 @@
         document.getElementById("removeDate").value = item.date;
         document.getElementById("usagePlan").value = item.plan;
         document.getElementById("itemNotes").value = item.notes;
-        
         document.getElementById("usedDate").value = item.usedDate || "";
         document.getElementById("usedLocation").value = item.usedLocation || "";
 
         toggleFormUsedFields();
-
         alert(`管理ID: ${item.id} のデータをフォームにコピーしました。`);
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     function deleteItem(id) {
         if (confirm("このデータを削除してもよろしいですか？")) {
-            if (isEditing && parseInt(document.getElementById("editItemId").value) === id) {
-                cancelEdit();
-            }
+            if (isEditing && parseInt(document.getElementById("editItemId").value) === id) { cancelEdit(); }
             inventory = inventory.filter(item => item.id !== id);
             renderInventory();
-            saveCloudData(); // クラウドに同期
+            saveCloudData();
         }
     }
 
@@ -1128,45 +935,24 @@
     }
 
     function copyToClipboard() {
-        if (inventory.length === 0) {
-            alert("コピーするデータがありません。");
-            return;
-        }
-
+        if (inventory.length === 0) { alert("コピーするデータがありません。"); return; }
         const headers = ["管理ID", "法人名", "商品名", "部材(分類)", "型式", "撤去店舗", "撤去日付", "使用予定", "使用日", "使用場所", "備考"];
         let textContent = headers.join("\t") + "\n";
-
         inventory.forEach(item => {
-            const row = [
-                item.id, item.company || "", item.name || "", item.category || "", item.model || "",
-                item.store || "", item.date || "", item.plan || "", item.usedDate || "", item.usedLocation || "", item.notes || ""
-            ];
+            const row = [item.id, item.company || "", item.name || "", item.category || "", item.model || "", item.store || "", item.date || "", item.plan || "", item.usedDate || "", item.usedLocation || "", item.notes || ""];
             textContent += row.join("\t") + "\n";
         });
-
-        navigator.clipboard.writeText(textContent).then(() => {
-            alert("一覧データをコピーしました！");
-        }).catch(err => {
-            alert("コピーに失敗しました: " + err);
-        });
+        navigator.clipboard.writeText(textContent).then(() => { alert("一覧データをコピーしました！"); }).catch(err => { alert("コピーに失敗しました: " + err); });
     }
 
     function exportCSV() {
-        if (inventory.length === 0) {
-            alert("エクスポートするデータがありません。");
-            return;
-        }
+        if (inventory.length === 0) { alert("エクスポートするデータがありません。"); return; }
         const headers = ["管理ID", "法人名", "商品名", "部材(分類)", "型式", "撤去店舗", "撤去日付", "使用予定", "使用日", "使用場所", "備考"];
         let csvContent = headers.map(h => `"${h.replace(/"/g, '""')}"`).join(",") + "\r\n";
-
         inventory.forEach(item => {
-            const row = [
-                item.id, item.company || "", item.name || "", item.category || "", item.model || "",
-                item.store || "", item.date || "", item.plan || "", item.usedDate || "", item.usedLocation || "", item.notes || ""
-            ];
+            const row = [item.id, item.company || "", item.name || "", item.category || "", item.model || "", item.store || "", item.date || "", item.plan || "", item.usedDate || "", item.usedLocation || "", item.notes || ""];
             csvContent += row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(",") + "\r\n";
         });
-
         const bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
         const blob = new Blob([bom, csvContent], { type: "text/csv;charset=utf-8;" });
         const link = document.createElement("a");
@@ -1180,33 +966,22 @@
     function importCSV(input) {
         const file = input.files[0];
         if (!file) return;
-
         const reader = new FileReader();
         reader.onload = function (e) {
             const text = e.target.result;
             const lines = parseCSV(text);
-            if (lines.length <= 1) { return; }
-
+            if (lines.length <= 1) return;
             if (confirm("CSVデータを読み込みますか？")) {
                 for (let i = 1; i < lines.length; i++) {
                     const row = lines[i];
                     if (row.length < 2 || !row[2]) continue;
                     inventory.push({
-                        id: nextId++, 
-                        company: row[1] || "",
-                        name: row[2] || "", 
-                        category: row[3] || "", 
-                        model: row[4] || "",
-                        store: row[5] || "", 
-                        date: row[6] || "", 
-                        plan: row[7] || "未定", 
-                        usedDate: row[8] || "", 
-                        usedLocation: row[9] || "", 
-                        notes: row[10] || ""
+                        id: nextId++, company: row[1] || "", name: row[2] || "", category: row[3] || "", model: row[4] || "",
+                        store: row[5] || "", date: row[6] || "", plan: row[7] || "未定", usedDate: row[8] || "", usedLocation: row[9] || "", notes: row[10] || ""
                     });
                 }
                 renderInventory();
-                saveCloudData(); // クラウド同期
+                saveCloudData();
                 alert("CSVからインポートしました。");
                 input.value = "";
             }
@@ -1219,17 +994,13 @@
         for (let i = 0; i < text.length; i++) {
             let c = text[i]; let next = text[i+1];
             if (inQuotes) {
-                if (c === '"') {
-                    if (next === '"') { row[row.length - 1] += '"'; i++; }
-                    else { inQuotes = false; }
-                } else { row[row.length - 1] += c; }
+                if (c === '"') { if (next === '"') { row[row.length - 1] += '"'; i++; } else { inQuotes = false; } } 
+                else { row[row.length - 1] += c; }
             } else {
                 if (c === '"') { inQuotes = true; }
                 else if (c === ',') { row.push(""); }
-                else if (c === '\r' || c === '\n') {
-                    if (c === '\r' && next === '\n') { i++; }
-                    lines.push(row); row = [""];
-                } else { row[row.length - 1] += c; }
+                else if (c === '\r' || c === '\n') { if (c === '\r' && next === '\n') { i++; } lines.push(row); row = [""]; } 
+                else { row[row.length - 1] += c; }
             }
         }
         if (row.length > 1 || row[0] !== "") { lines.push(row); }
@@ -1243,17 +1014,10 @@
 
     function getTodayString() {
         const d = new Date();
-        const yyyy = d.getFullYear();
-        const mm = String(d.getMonth() + 1).padStart(2, '0');
-        const dd = String(d.getDate()).padStart(2, '0');
-        const hh = String(d.getHours()).padStart(2, '0');
-        const min = String(d.getMinutes()).padStart(2, '0');
-        const ss = String(d.getSeconds()).padStart(2, '0');
-        
-        return `${yyyy}${mm}${dd}_${hh}${min}${ss}`;
+        return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}_${String(d.getHours()).padStart(2, '0')}${String(d.getMinutes()).padStart(2, '0')}${String(d.getSeconds()).padStart(2, '0')}`;
     }
 
-    // 🚀 初期読み込み（Googleスプレッドシートから最新取得）
+    // 🚀 初期読み込み実行
     fetchCloudData();
 </script>
 
