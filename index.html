@@ -395,7 +395,8 @@
 </div>
 
 <script>
-    const GAS_URL = "https://script.google.com/a/macros/suntac.jp/s/AKfycbwmp9YXGaMB6V95HXagj34iiCJAzM1zHhLH9jgNIgXiBqtrSssMk264A0piYVu13LQP/exec";
+    // 新しいGASのURLに差し替え済み
+    const GAS_URL = "https://script.google.com/a/macros/suntac.jp/s/AKfycbzRFB5YWPBzz5ptt7AuUmYZTdzxLaIeQJ9_wXa2xin4bvnyzpaFcbp03edZri-cha5A/exec";
 
     let inventory = [];
     let nextBaseId = 101;
@@ -420,7 +421,7 @@
             const data = await response.json();
             
             inventory = data.map(item => ({
-                id: String(item["管理ID"] || "").trim(), // 文字列に強制変換・空白除去
+                id: String(item["管理ID"] || "").trim(),
                 company: item["法人名"] || "",
                 name: item["商品名"] || "",
                 category: item["部材(分類)"] || "",
@@ -440,7 +441,6 @@
             console.error("クラウド同期エラー:", error);
             syncStatus.innerText = "⚠️ クラウド未認証または読み込み失敗（黄色い認証ボタンをお試しください）";
             inventory = JSON.parse(localStorage.getItem('office_inventory')) || [];
-            // IDを文字列に統一
             inventory.forEach(i => i.id = String(i.id).trim());
             calcNextBaseId();
             renderInventory();
@@ -858,7 +858,6 @@
         saveCloudData();
     }
 
-    // 💡 管理IDの型を揃えて検索する（1〜8も確実にヒット）
     function startEdit(id) {
         const strTargetId = String(id).trim();
         const item = inventory.find(i => String(i.id).trim() === strTargetId);
