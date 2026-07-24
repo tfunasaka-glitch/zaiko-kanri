@@ -22,24 +22,7 @@
         }
         h1 { text-align: center; color: #2c3e50; margin-bottom: 10px; }
         .sync-status {
-            text-align: center; font-size: 13px; color: #64748b; margin-bottom: 15px; font-weight: bold;
-        }
-        
-        .auth-banner {
-            background-color: #fffbebf8;
-            border: 1px solid #fcd34d;
-            padding: 12px 20px;
-            border-radius: 6px;
-            margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-        .auth-text { font-size: 13px; color: #92400e; font-weight: bold; }
-        .btn-auth {
-            background-color: #d97706; color: white; border: none; padding: 8px 16px; border-radius: 4px; font-size: 13px; font-weight: bold; cursor: pointer;
+            text-align: center; font-size: 13px; color: #10b981; margin-bottom: 15px; font-weight: bold;
         }
 
         .form-section {
@@ -63,7 +46,6 @@
         .btn-save-edit { background-color: #f1c40f; color: #2c3e50; border: none; padding: 12px 24px; }
         .btn-cancel-edit { background-color: #95a5a6; color: white; border: none; padding: 12px 15px; }
         
-        .btn-reload { background-color: #34495e; color: white; border: none; }
         .btn-csv-exp { background-color: #2980b9; color: white; border: none; }
         .btn-csv-imp { background-color: #7f8c8d; color: white; border: none; }
         .btn-print { background-color: #9b59b6; color: white; border: none; }
@@ -139,7 +121,7 @@
         @media print {
             body { background-color: #fff; padding: 0; }
             .container { box-shadow: none; padding: 0; max-width: 100%; }
-            .form-section, .no-print, th:last-child, td:last-child, .summary-control, .btn-clear-filter, .view-mode-bar, .bulk-action-bar, th:first-child, td:first-child, .auth-banner {
+            .form-section, .no-print, th:last-child, td:last-child, .summary-control, .btn-clear-filter, .view-mode-bar, .bulk-action-bar, th:first-child, td:first-child {
                 display: none !important;
             }
             .summary-section { border: 1px solid #999 !important; background: #fff !important; margin-bottom: 15px; }
@@ -158,13 +140,7 @@
 
 <div class="container">
     <h1>営業所 在庫・撤去品管理</h1>
-    <div id="syncStatus" class="sync-status">☁️ クラウド同期準備中...</div>
-
-    <!-- 初回認証案内バナー -->
-    <div class="auth-banner no-print" id="authBanner">
-        <div class="auth-text">🔐 スマホ・PCで初めて開く場合、または同期エラーが出る場合は認証が必要です。</div>
-        <button class="btn-auth" onclick="authenticateGoogle()">会社アカウントで認証を開く</button>
-    </div>
+    <div id="syncStatus" class="sync-status">⚡ クラウド接続中...</div>
 
     <!-- データ入力フォーム -->
     <div class="form-section" id="formSection">
@@ -234,7 +210,6 @@
             <button class="btn-add" id="btnSubmit" onclick="handleSubmit()">この内容で登録する</button>
             
             <div class="action-btns no-print">
-                <button class="btn-reload" onclick="fetchCloudData()">🔄 最新データに更新</button>
                 <div class="file-input-wrapper">
                     <button class="btn-csv-imp">CSVインポート</button>
                     <input type="file" id="csvFileInput" accept=".csv" onchange="importCSV(this)">
@@ -394,142 +369,138 @@
     </div>
 </div>
 
-<script>
-    // ★最新のGAS URLをセット完了★
-    const GAS_URL = "https://script.google.com/a/macros/suntac.jp/s/AKfycbxT79LkCLWKzzgoeXw8MNfyAoJBxdBxDxuBnXgrN5G6COSQgksCv_L9fpgd6C6v5lfU/exec";
+<!-- Firebase SDK の読み込み -->
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-    let inventory = [];
-    let nextBaseId = 101;
-    let isEditing = false;
-    let activeFilterValue = null; 
-    let currentViewMode = 'normal';
-    let expandedGroups = {};
-    let selectedIds = new Set();
+    // 取得いただいた Firebase 設定情報をセット
+    const firebaseConfig = {
+        apiKey: "AIzaSyBW_e_a5V14R0tIF5nBeyr3gSD_-KXJHOQ",
+        authDomain: "zaiko-app-d37a3.firebaseapp.com",
+        projectId: "zaiko-app-d37a3",
+        storageBucket: "zaiko-app-d37a3.firebasestorage.app",
+        messagingSenderId: "1021363751421",
+        appId: "1:1021363751421:web:a493af7ded471195b67194"
+    };
 
-    function authenticateGoogle() {
-        window.open(GAS_URL, '_blank');
-        alert("開いたタブで会社のGoogleアカウントでログイン/アクセスを許可してください。\n完了後、この画面に戻り「最新データに更新」を押してください。");
-    }
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const inventoryCol = collection(db, "inventory");
 
-    async function fetchCloudData() {
-        const syncStatus = document.getElementById("syncStatus");
-        syncStatus.innerText = "☁️ スプレッドシートからデータを取得中...";
-        try {
-            const response = await fetch(GAS_URL, { redirect: 'follow' });
-            if (!response.ok) throw new Error("HTTP error " + response.status);
-            
-            const data = await response.json();
-            
-            inventory = data.map(item => ({
-                id: String(item["管理ID"] || "").trim(),
-                company: item["法人名"] || "",
-                name: item["商品名"] || "",
-                category: item["部材(分類)"] || "",
-                model: item["型式"] || "",
-                store: item["撤去店舗"] || "",
-                date: item["撤去日付"] || "",
-                plan: item["使用予定"] || "未定",
-                usedDate: item["使用日"] || "",
-                usedLocation: item["使用場所"] || "",
-                notes: item["備考"] || ""
-            })).filter(item => item.id !== "");
+    window.inventory = [];
+    window.nextBaseId = 101;
+    window.isEditing = false;
+    window.activeFilterValue = null; 
+    window.currentViewMode = 'normal';
+    window.expandedGroups = {};
+    window.selectedIds = new Set();
 
-            calcNextBaseId();
-            syncStatus.innerText = "✅ クラウドと正常に同期されています";
-            renderInventory();
-        } catch (error) {
-            console.error("クラウド同期エラー:", error);
-            syncStatus.innerText = "⚠️ クラウド未認証または読み込み失敗（黄色い認証ボタンをお試しください）";
-            inventory = JSON.parse(localStorage.getItem('office_inventory')) || [];
-            inventory.forEach(i => i.id = String(i.id).trim());
-            calcNextBaseId();
-            renderInventory();
-        }
-    }
+    // ⚡ クラウドからリアルタイムで自動同期（誰かが追加・変更すると即座に反映）
+    onSnapshot(inventoryCol, (snapshot) => {
+        window.inventory = [];
+        snapshot.forEach((doc) => {
+            window.inventory.push(doc.data());
+        });
+        
+        calcNextBaseId();
+        document.getElementById("syncStatus").innerText = "⚡ クラウドと爆速同期中（自動連携OK）";
+        renderInventory();
+    }, (error) => {
+        console.error("Firebase同期エラー:", error);
+        document.getElementById("syncStatus").innerText = "⚠️ クラウド読み込みエラー";
+    });
 
     function calcNextBaseId() {
-        if (inventory.length === 0) {
-            nextBaseId = 101;
+        if (window.inventory.length === 0) {
+            window.nextBaseId = 101;
             return;
         }
         let maxId = 100;
-        inventory.forEach(item => {
+        window.inventory.forEach(item => {
             const baseStr = String(item.id).split('-')[0];
             const num = parseInt(baseStr, 10);
             if (!isNaN(num) && num > maxId) {
                 maxId = num;
             }
         });
-        nextBaseId = maxId + 1;
+        window.nextBaseId = maxId + 1;
     }
 
-    async function saveCloudData() {
-        const syncStatus = document.getElementById("syncStatus");
-        syncStatus.innerText = "☁️ クラウドへ自動保存中...";
-        
-        localStorage.setItem('office_inventory', JSON.stringify(inventory));
-
+    // クラウド保存用関数
+    async function saveSingleItemToCloud(item) {
         try {
-            await fetch(GAS_URL, {
-                method: "POST",
-                headers: { "Content-Type": "text/plain" },
-                body: JSON.stringify(inventory),
-                redirect: 'follow'
-            });
-            syncStatus.innerText = "✅ クラウドへ保存完了";
-        } catch (error) {
-            console.error("保存エラー:", error);
-            syncStatus.innerText = "⚠️ クラウド保存失敗（ローカルのみ保存されました）";
+            await setDoc(doc(db, "inventory", String(item.id)), item);
+        } catch (e) {
+            console.error("保存エラー:", e);
+            alert("クラウドへの保存に失敗しました。");
         }
     }
 
-    function toggleFormUsedFields() {
+    async function deleteSingleItemFromCloud(id) {
+        try {
+            await deleteDoc(doc(db, "inventory", String(id)));
+        } catch (e) {
+            console.error("削除エラー:", e);
+        }
+    }
+
+    async function saveBatchToCloud(itemList) {
+        const batch = writeBatch(db);
+        itemList.forEach(item => {
+            const ref = doc(db, "inventory", String(item.id));
+            batch.set(ref, item);
+        });
+        await batch.commit();
+    }
+
+    window.toggleFormUsedFields = function() {
         const plan = document.getElementById("usagePlan").value;
         const fields = document.getElementById("formUsedFields");
         fields.style.display = (plan === "使用済み") ? "grid" : "none";
-    }
+    };
 
-    function changeViewMode(mode) {
-        currentViewMode = mode;
-        expandedGroups = {};
+    window.changeViewMode = function(mode) {
+        window.currentViewMode = mode;
+        window.expandedGroups = {};
         document.querySelectorAll('.btn-view-mode').forEach(b => b.classList.remove('active'));
         if (mode === 'normal') document.getElementById('btnViewNormal').classList.add('active');
         if (mode === 'category') document.getElementById('btnViewCategory').classList.add('active');
         if (mode === 'company') document.getElementById('btnViewCompany').classList.add('active');
         renderInventory();
-    }
+    };
 
-    function toggleGroup(groupName) {
-        expandedGroups[groupName] = !expandedGroups[groupName];
+    window.toggleGroup = function(groupName) {
+        window.expandedGroups[groupName] = !window.expandedGroups[groupName];
         renderInventory();
-    }
+    };
 
-    function toggleSelectAll(masterCheckbox) {
+    window.toggleSelectAll = function(masterCheckbox) {
         const checkboxes = document.querySelectorAll('.item-checkbox');
         checkboxes.forEach(cb => {
             cb.checked = masterCheckbox.checked;
             const id = String(cb.dataset.id);
-            if (masterCheckbox.checked) { selectedIds.add(id); } 
-            else { selectedIds.delete(id); }
+            if (masterCheckbox.checked) { window.selectedIds.add(id); } 
+            else { window.selectedIds.delete(id); }
         });
         updateBulkBar();
-    }
+    };
 
-    function handleCheckboxChange(cb, id) {
+    window.handleCheckboxChange = function(cb, id) {
         const strId = String(id);
-        if (cb.checked) { selectedIds.add(strId); } 
-        else { selectedIds.delete(strId); document.getElementById('selectAllCheckbox').checked = false; }
+        if (cb.checked) { window.selectedIds.add(strId); } 
+        else { window.selectedIds.delete(strId); document.getElementById('selectAllCheckbox').checked = false; }
         updateBulkBar();
-    }
+    };
 
     function updateBulkBar() {
         const bar = document.getElementById('bulkActionBar');
         const countSpan = document.getElementById('selectedCount');
-        countSpan.innerText = selectedIds.size;
-        bar.style.display = selectedIds.size > 0 ? 'flex' : 'none';
+        countSpan.innerText = window.selectedIds.size;
+        bar.style.display = window.selectedIds.size > 0 ? 'flex' : 'none';
     }
 
-    function renderInventory() {
+    window.renderInventory = function() {
         const tbody = document.getElementById("inventoryBody");
         const noData = document.getElementById("noDataMessage");
         const filterKey = document.getElementById("summaryKeySelect").value;
@@ -537,10 +508,10 @@
         
         tbody.innerHTML = "";
 
-        let filteredList = inventory;
-        if (!showUsed) { filteredList = inventory.filter(item => item.plan !== "使用済み"); }
+        let filteredList = window.inventory;
+        if (!showUsed) { filteredList = window.inventory.filter(item => item.plan !== "使用済み"); }
 
-        if (activeFilterValue !== null) {
+        if (window.activeFilterValue !== null) {
             filteredList = filteredList.filter(item => {
                 let itemVal = "";
                 if (filterKey === "month") {
@@ -549,7 +520,7 @@
                     itemVal = (item[filterKey] || "").trim();
                     if (!itemVal) itemVal = "（未入力）";
                 }
-                return itemVal === activeFilterValue;
+                return itemVal === window.activeFilterValue;
             });
         }
 
@@ -558,8 +529,8 @@
         } else {
             noData.style.display = "none";
 
-            if (currentViewMode === 'category' || currentViewMode === 'company') {
-                const groupKey = currentViewMode === 'category' ? 'category' : 'company';
+            if (window.currentViewMode === 'category' || window.currentViewMode === 'company') {
+                const groupKey = window.currentViewMode === 'category' ? 'category' : 'company';
                 const groups = {};
 
                 filteredList.forEach(item => {
@@ -569,19 +540,19 @@
                 });
 
                 Object.keys(groups).sort().forEach(gName => {
-                    const isOpen = !!expandedGroups[gName];
+                    const isOpen = !!window.expandedGroups[gName];
                     const icon = isOpen ? "▼" : "▶";
 
                     const headerTr = document.createElement("tr");
                     headerTr.className = "group-header-row";
-                    headerTr.onclick = () => toggleGroup(gName);
+                    headerTr.onclick = () => window.toggleGroup(gName);
                     
                     headerTr.innerHTML = `
                         <td colspan="13" style="padding:0;">
                             <div class="group-header-cell">
                                 <div>
                                     <span class="group-icon">${icon}</span>
-                                    ${currentViewMode === 'category' ? '📁 部材(分類)' : '🏢 法人名'}: 
+                                    ${window.currentViewMode === 'category' ? '📁 部材(分類)' : '🏢 法人名'}: 
                                     <strong>${escapeHtml(gName)}</strong>
                                 </div>
                                 <span style="font-size:13px; color:#64748b; background:#fff; padding:2px 10px; border-radius:10px; border:1px solid #cbd5e1;">
@@ -603,7 +574,7 @@
         
         updateSummary();
         updateBulkBar();
-    }
+    };
 
     function createRowElement(item) {
         const tr = document.createElement("tr");
@@ -621,11 +592,11 @@
         }
         
         const strId = String(item.id);
-        const isChecked = selectedIds.has(strId) ? "checked" : "";
+        const isChecked = window.selectedIds.has(strId) ? "checked" : "";
 
         tr.innerHTML = `
             <td class="no-print">
-                <input type="checkbox" class="item-checkbox" data-id="${strId}" ${isChecked} onchange="handleCheckboxChange(this, '${strId}')">
+                <input type="checkbox" class="item-checkbox" data-id="${strId}" ${isChecked} onchange="window.handleCheckboxChange(this, '${strId}')">
             </td>
             <td><strong>${escapeHtml(strId)}</strong></td>
             <td>${statusBadge}</td>
@@ -639,10 +610,10 @@
             <td>${usedDetail}</td>
             <td>${escapeHtml(item.notes || '-')}</td>
             <td class="no-print">
-                <button class="btn-row btn-row-edit" onclick="startEdit('${strId}')">編集</button>
-                <button class="btn-row btn-row-clone" onclick="cloneItem('${strId}')">複製</button>
-                ${item.plan !== "使用済み" ? `<button class="btn-row btn-row-used" onclick="openUsedModal('${strId}')">使用済</button>` : ''}
-                <button class="btn-row btn-row-del" onclick="deleteItem('${strId}')">削除</button>
+                <button class="btn-row btn-row-edit" onclick="window.startEdit('${strId}')">編集</button>
+                <button class="btn-row btn-row-clone" onclick="window.cloneItem('${strId}')">複製</button>
+                ${item.plan !== "使用済み" ? `<button class="btn-row btn-row-used" onclick="window.openUsedModal('${strId}')">使用済</button>` : ''}
+                <button class="btn-row btn-row-del" onclick="window.deleteItem('${strId}')">削除</button>
             </td>
         `;
         return tr;
@@ -657,11 +628,11 @@
         
         container.innerHTML = "";
 
-        let baseList = inventory;
-        if (!showUsed) { baseList = inventory.filter(item => item.plan !== "使用済み"); }
+        let baseList = window.inventory;
+        if (!showUsed) { baseList = window.inventory.filter(item => item.plan !== "使用済み"); }
         totalSpan.innerText = baseList.length;
 
-        filterBtn.style.display = activeFilterValue !== null ? "inline-block" : "none";
+        filterBtn.style.display = window.activeFilterValue !== null ? "inline-block" : "none";
 
         if (baseList.length === 0) {
             container.innerHTML = `<span style="color:#94a3b8; font-size:14px;">対象データがありません。</span>`;
@@ -688,17 +659,17 @@
         sortedItems.forEach(([label, count]) => {
             const card = document.createElement("div");
             card.className = "summary-card";
-            if (activeFilterValue === label) card.classList.add("active");
+            if (window.activeFilterValue === label) card.classList.add("active");
             card.innerHTML = `
                 <span class="name"><strong>${escapeHtml(label)}</strong></span>
                 <span class="count">${count} 件</span>
             `;
-            card.onclick = () => setFilter(label);
+            card.onclick = () => window.setFilter(label);
             container.appendChild(card);
         });
     }
 
-    function openUsedModal(id) {
+    window.openUsedModal = function(id) {
         const strId = String(id);
         document.getElementById("isBulkUsed").value = "false";
         document.getElementById("modalItemId").value = strId;
@@ -707,51 +678,50 @@
         document.getElementById("modalUsedDate").value = today;
         document.getElementById("modalUsedLocation").value = "";
         document.getElementById("usedModal").style.display = "flex";
-    }
+    };
 
-    function openBulkUsedModal() {
-        if (selectedIds.size === 0) return;
+    window.openBulkUsedModal = function() {
+        if (window.selectedIds.size === 0) return;
         document.getElementById("isBulkUsed").value = "true";
-        document.getElementById("usedModalTitle").innerText = `一括使用済み処理 (${selectedIds.size} 件)`;
+        document.getElementById("usedModalTitle").innerText = `一括使用済み処理 (${window.selectedIds.size} 件)`;
         const today = new Date().toISOString().split('T')[0];
         document.getElementById("modalUsedDate").value = today;
         document.getElementById("modalUsedLocation").value = "";
         document.getElementById("usedModal").style.display = "flex";
-    }
+    };
 
-    function closeUsedModal() { document.getElementById("usedModal").style.display = "none"; }
+    window.closeUsedModal = function() { document.getElementById("usedModal").style.display = "none"; };
 
-    function saveUsedModal() {
+    window.saveUsedModal = async function() {
         const isBulk = document.getElementById("isBulkUsed").value === "true";
         const usedDate = document.getElementById("modalUsedDate").value;
         const usedLoc = document.getElementById("modalUsedLocation").value.trim();
 
         if (isBulk) {
-            inventory.forEach(item => {
-                if (selectedIds.has(String(item.id))) {
-                    item.plan = "使用済み";
-                    item.usedDate = usedDate;
-                    item.usedLocation = usedLoc || "使用先未記録";
-                }
+            const targets = window.inventory.filter(item => window.selectedIds.has(String(item.id)));
+            targets.forEach(item => {
+                item.plan = "使用済み";
+                item.usedDate = usedDate;
+                item.usedLocation = usedLoc || "使用先未記録";
             });
-            selectedIds.clear();
+            await saveBatchToCloud(targets);
+            window.selectedIds.clear();
             alert("選択したデータを一括で使用済みに設定しました。");
         } else {
             const id = String(document.getElementById("modalItemId").value);
-            const item = inventory.find(i => String(i.id) === id);
+            const item = window.inventory.find(i => String(i.id) === id);
             if (item) {
                 item.plan = "使用済み";
                 item.usedDate = usedDate;
                 item.usedLocation = usedLoc || "使用先未記録";
+                await saveSingleItemToCloud(item);
             }
         }
-        closeUsedModal();
-        renderInventory();
-        saveCloudData();
-    }
+        window.closeUsedModal();
+    };
 
-    function openBulkEditModal() {
-        if (selectedIds.size === 0) return;
+    window.openBulkEditModal = function() {
+        if (window.selectedIds.size === 0) return;
         document.getElementById("bulkCompany").value = "";
         document.getElementById("bulkName").value = "";
         document.getElementById("bulkCategory").value = "";
@@ -760,11 +730,11 @@
         document.getElementById("bulkPlan").value = "";
         document.getElementById("bulkNotes").value = "";
         document.getElementById("bulkEditModal").style.display = "flex";
-    }
+    };
 
-    function closeBulkEditModal() { document.getElementById("bulkEditModal").style.display = "none"; }
+    window.closeBulkEditModal = function() { document.getElementById("bulkEditModal").style.display = "none"; };
 
-    function executeBulkEdit() {
+    window.executeBulkEdit = async function() {
         const company = document.getElementById("bulkCompany").value.trim();
         const name = document.getElementById("bulkName").value.trim();
         const category = document.getElementById("bulkCategory").value.trim();
@@ -773,47 +743,45 @@
         const plan = document.getElementById("bulkPlan").value;
         const notes = document.getElementById("bulkNotes").value.trim();
 
-        let updatedCount = 0;
-        inventory.forEach(item => {
-            if (selectedIds.has(String(item.id))) {
-                if (company) item.company = company;
-                if (name) item.name = name;
-                if (category) item.category = category;
-                if (store) item.store = store;
-                if (date) item.date = date;
-                if (plan) item.plan = plan;
-                if (notes) item.notes = notes;
-                updatedCount++;
-            }
+        const targets = window.inventory.filter(item => window.selectedIds.has(String(item.id)));
+        targets.forEach(item => {
+            if (company) item.company = company;
+            if (name) item.name = name;
+            if (category) item.category = category;
+            if (store) item.store = store;
+            if (date) item.date = date;
+            if (plan) item.plan = plan;
+            if (notes) item.notes = notes;
         });
 
-        alert(`${updatedCount} 件のデータを一括更新しました。`);
-        selectedIds.clear();
-        closeBulkEditModal();
-        renderInventory();
-        saveCloudData();
-    }
+        await saveBatchToCloud(targets);
+        alert(`${targets.length} 件のデータを一括更新しました。`);
+        window.selectedIds.clear();
+        window.closeBulkEditModal();
+    };
 
-    function bulkDelete() {
-        if (selectedIds.size === 0) return;
-        if (confirm(`選択した ${selectedIds.size} 件のデータを本当に一括削除しますか？`)) {
-            inventory = inventory.filter(item => !selectedIds.has(String(item.id)));
-            selectedIds.clear();
-            renderInventory();
-            saveCloudData();
+    window.bulkDelete = async function() {
+        if (window.selectedIds.size === 0) return;
+        if (confirm(`選択した ${window.selectedIds.size} 件のデータを本当に一括削除しますか？`)) {
+            const batch = writeBatch(db);
+            window.selectedIds.forEach(id => {
+                batch.delete(doc(db, "inventory", String(id)));
+            });
+            await batch.commit();
+            window.selectedIds.clear();
         }
-    }
+    };
 
-    function setFilter(value) {
-        activeFilterValue = activeFilterValue === value ? null : value;
+    window.setFilter = function(value) {
+        window.activeFilterValue = window.activeFilterValue === value ? null : value;
         renderInventory();
-    }
+    };
 
-    function clearFilter() { activeFilterValue = null; renderInventory(); }
-    function handleKeyChange() { activeFilterValue = null; renderInventory(); }
-    function handleSubmit() { if (isEditing) { saveEdit(); } else { addItem(); } }
+    window.clearFilter = function() { window.activeFilterValue = null; renderInventory(); };
+    window.handleKeyChange = function() { window.activeFilterValue = null; renderInventory(); };
+    window.handleSubmit = function() { if (window.isEditing) { saveEdit(); } else { addItem(); } };
 
-    function addItem() {
+    async function addItem() {
         const company = document.getElementById("companyName").value.trim();
         const name = document.getElementById("itemName").value.trim();
         const qty = parseInt(document.getElementById("itemQty").value, 10) || 1;
@@ -828,11 +796,12 @@
 
         if (name === "") { alert("商品名は必須入力です。"); return; }
 
-        const currentBase = nextBaseId++;
+        const currentBase = window.nextBaseId++;
+        const newItems = [];
 
         if (qty === 1) {
             const singleId = `${currentBase}-1`;
-            inventory.push({
+            newItems.push({
                 id: singleId, company: company, name: name, category: category, model: model,
                 store: store, date: date, plan: plan, 
                 usedDate: plan === "使用済み" ? usedDate : "",
@@ -842,7 +811,7 @@
         } else {
             for (let i = 1; i <= qty; i++) {
                 const subId = `${currentBase}-${i}`;
-                inventory.push({
+                newItems.push({
                     id: subId, company: company, name: name, category: category, model: model,
                     store: store, date: date, plan: plan, 
                     usedDate: plan === "使用済み" ? usedDate : "",
@@ -850,17 +819,16 @@
                     notes: notes
                 });
             }
-            alert(`${qty} 件の個別データ（管理ID: ${currentBase}-1 〜 ${currentBase}-${qty}）に展開して登録しました！`);
+            alert(`${qty} 件の個別データ（管理ID: ${currentBase}-1 〜 ${currentBase}-${qty}）をクラウドへ追加登録しました！`);
         }
 
         clearForm();
-        renderInventory();
-        saveCloudData();
+        await saveBatchToCloud(newItems);
     }
 
-    function startEdit(id) {
+    window.startEdit = function(id) {
         const strTargetId = String(id).trim();
-        const item = inventory.find(i => String(i.id).trim() === strTargetId);
+        const item = window.inventory.find(i => String(i.id).trim() === strTargetId);
         if (!item) return;
 
         document.getElementById("editItemId").value = String(item.id);
@@ -877,9 +845,9 @@
 
         document.getElementById("qtyGroup").style.display = "none";
 
-        toggleFormUsedFields();
+        window.toggleFormUsedFields();
 
-        isEditing = true;
+        window.isEditing = true;
         document.getElementById("formSection").classList.add("edit-mode");
         document.getElementById("formActionTitle").innerText = `✍️ データを編集・修正中 (管理ID: ${item.id})`;
         
@@ -889,9 +857,9 @@
 
         document.getElementById("btnCancelEdit").style.display = "inline-block";
         window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
+    };
 
-    function saveEdit() {
+    async function saveEdit() {
         const id = String(document.getElementById("editItemId").value).trim();
         const company = document.getElementById("companyName").value.trim();
         const name = document.getElementById("itemName").value.trim();
@@ -906,24 +874,21 @@
 
         if (name === "") { alert("商品名は必須入力です。"); return; }
 
-        const itemIndex = inventory.findIndex(i => String(i.id).trim() === id);
-        if (itemIndex > -1) {
-            inventory[itemIndex] = {
-                id: id, company: company, name: name, category: category, model: model,
-                store: store, date: date, plan: plan, 
-                usedDate: plan === "使用済み" ? usedDate : "",
-                usedLocation: plan === "使用済み" ? usedLocation : "",
-                notes: notes
-            };
-            alert("編集内容を保存しました。");
-            cancelEdit();
-            renderInventory();
-            saveCloudData();
-        }
+        const updatedItem = {
+            id: id, company: company, name: name, category: category, model: model,
+            store: store, date: date, plan: plan, 
+            usedDate: plan === "使用済み" ? usedDate : "",
+            usedLocation: plan === "使用済み" ? usedLocation : "",
+            notes: notes
+        };
+
+        await saveSingleItemToCloud(updatedItem);
+        alert("編集内容をクラウドへ保存しました。");
+        window.cancelEdit();
     }
 
-    function cancelEdit() {
-        isEditing = false;
+    window.cancelEdit = function() {
+        window.isEditing = false;
         clearForm();
         document.getElementById("qtyGroup").style.display = "flex";
         document.getElementById("formSection").classList.remove("edit-mode");
@@ -932,15 +897,15 @@
         btnSubmit.innerText = "この内容で登録する";
         btnSubmit.className = "btn-add";
         document.getElementById("btnCancelEdit").style.display = "none";
-        toggleFormUsedFields();
-    }
+        window.toggleFormUsedFields();
+    };
 
-    function cloneItem(id) {
+    window.cloneItem = function(id) {
         const strTargetId = String(id).trim();
-        const item = inventory.find(i => String(i.id).trim() === strTargetId);
+        const item = window.inventory.find(i => String(i.id).trim() === strTargetId);
         if (!item) return;
 
-        if (isEditing) cancelEdit();
+        if (window.isEditing) window.cancelEdit();
 
         document.getElementById("companyName").value = item.company || "";
         document.getElementById("itemName").value = item.name;
@@ -954,20 +919,18 @@
         document.getElementById("usedDate").value = item.usedDate || "";
         document.getElementById("usedLocation").value = item.usedLocation || "";
 
-        toggleFormUsedFields();
+        window.toggleFormUsedFields();
         alert(`管理ID: ${item.id} のデータをフォームにコピーしました。`);
         window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
+    };
 
-    function deleteItem(id) {
+    window.deleteItem = async function(id) {
         const strTargetId = String(id).trim();
         if (confirm(`管理ID: ${strTargetId} のデータを削除してもよろしいですか？`)) {
-            if (isEditing && String(document.getElementById("editItemId").value).trim() === strTargetId) { cancelEdit(); }
-            inventory = inventory.filter(item => String(item.id).trim() !== strTargetId);
-            renderInventory();
-            saveCloudData();
+            if (window.isEditing && String(document.getElementById("editItemId").value).trim() === strTargetId) { window.cancelEdit(); }
+            await deleteSingleItemFromCloud(strTargetId);
         }
-    }
+    };
 
     function clearForm() {
         document.getElementById("editItemId").value = "";
@@ -984,22 +947,22 @@
         document.getElementById("usedLocation").value = "";
     }
 
-    function copyToClipboard() {
-        if (inventory.length === 0) { alert("コピーするデータがありません。"); return; }
+    window.copyToClipboard = function() {
+        if (window.inventory.length === 0) { alert("コピーするデータがありません。"); return; }
         const headers = ["管理ID", "法人名", "商品名", "部材(分類)", "型式", "撤去店舗", "撤去日付", "使用予定", "使用日", "使用場所", "備考"];
         let textContent = headers.join("\t") + "\n";
-        inventory.forEach(item => {
+        window.inventory.forEach(item => {
             const row = [item.id, item.company || "", item.name || "", item.category || "", item.model || "", item.store || "", item.date || "", item.plan || "", item.usedDate || "", item.usedLocation || "", item.notes || ""];
             textContent += row.join("\t") + "\n";
         });
         navigator.clipboard.writeText(textContent).then(() => { alert("一覧データをコピーしました！"); }).catch(err => { alert("コピーに失敗しました: " + err); });
-    }
+    };
 
-    function exportCSV() {
-        if (inventory.length === 0) { alert("エクスポートするデータがありません。"); return; }
+    window.exportCSV = function() {
+        if (window.inventory.length === 0) { alert("エクスポートするデータがありません。"); return; }
         const headers = ["管理ID", "法人名", "商品名", "部材(分類)", "型式", "撤去店舗", "撤去日付", "使用予定", "使用日", "使用場所", "備考"];
         let csvContent = headers.map(h => `"${h.replace(/"/g, '""')}"`).join(",") + "\r\n";
-        inventory.forEach(item => {
+        window.inventory.forEach(item => {
             const row = [item.id, item.company || "", item.name || "", item.category || "", item.model || "", item.store || "", item.date || "", item.plan || "", item.usedDate || "", item.usedLocation || "", item.notes || ""];
             csvContent += row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(",") + "\r\n";
         });
@@ -1011,38 +974,37 @@
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-    }
+    };
 
-    function importCSV(input) {
+    window.importCSV = async function(input) {
         const file = input.files[0];
         if (!file) return;
         const reader = new FileReader();
-        reader.onload = function (e) {
+        reader.onload = async function (e) {
             const text = e.target.result;
             const lines = parseCSV(text);
             if (lines.length <= 1) return;
-            if (confirm("CSVデータを読み込みますか？")) {
+            if (confirm("CSVデータを読み込んでクラウドへ一括保存しますか？")) {
+                const newItems = [];
                 for (let i = 1; i < lines.length; i++) {
                     const row = lines[i];
                     if (row.length < 2 || !row[2]) continue;
                     
                     let impId = String(row[0] || "").trim();
-                    if (!impId) { impId = `${nextBaseId++}-1`; }
+                    if (!impId) { impId = `${window.nextBaseId++}-1`; }
 
-                    inventory.push({
+                    newItems.push({
                         id: impId, company: row[1] || "", name: row[2] || "", category: row[3] || "", model: row[4] || "",
                         store: row[5] || "", date: row[6] || "", plan: row[7] || "未定", usedDate: row[8] || "", usedLocation: row[9] || "", notes: row[10] || ""
                     });
                 }
-                calcNextBaseId();
-                renderInventory();
-                saveCloudData();
-                alert("CSVからインポートしました。");
+                await saveBatchToCloud(newItems);
+                alert("CSVからのインポートおよびクラウド同期が完了しました。");
                 input.value = "";
             }
         };
         reader.readAsText(file, "UTF-8");
-    }
+    };
 
     function parseCSV(text) {
         let lines = []; let row = [""]; let inQuotes = false;
@@ -1071,8 +1033,6 @@
         const d = new Date();
         return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}_${String(d.getHours()).padStart(2, '0')}${String(d.getMinutes()).padStart(2, '0')}${String(d.getSeconds()).padStart(2, '0')}`;
     }
-
-    fetchCloudData();
 </script>
 
 </body>
