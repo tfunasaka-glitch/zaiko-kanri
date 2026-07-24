@@ -25,7 +25,6 @@
             text-align: center; font-size: 13px; color: #64748b; margin-bottom: 15px; font-weight: bold;
         }
         
-        /* 認証・ログインバナー */
         .auth-banner {
             background-color: #fffbebf8;
             border: 1px solid #fcd34d;
@@ -48,11 +47,14 @@
         }
         .form-section.edit-mode { border-left: 5px solid #f1c40f; background: #fdfefe; }
         .form-title { font-weight: bold; font-size: 16px; margin-bottom: 15px; color: #2c3e50; display: flex; justify-content: space-between; }
-        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 15px; }
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 15px; margin-bottom: 15px; }
         .form-group { display: flex; flex-direction: column; }
         .form-group label { font-size: 14px; font-weight: bold; margin-bottom: 5px; color: #475569; }
         input, select, textarea, button { padding: 10px; font-size: 15px; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box; }
         textarea { resize: vertical; height: 40px; }
+        
+        .input-qty { background-color: #fefce8; border-color: #fde047; font-weight: bold; }
+
         .btn-container { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 15px; }
         .action-btns { display: flex; gap: 8px; flex-wrap: wrap; }
         button { font-weight: bold; cursor: pointer; transition: background 0.2s, opacity 0.2s; }
@@ -158,7 +160,7 @@
     <h1>営業所 在庫・撤去品管理</h1>
     <div id="syncStatus" class="sync-status">☁️ クラウド同期準備中...</div>
 
-    <!-- 💡 初回認証案内バナー -->
+    <!-- 初回認証案内バナー -->
     <div class="auth-banner no-print" id="authBanner">
         <div class="auth-text">🔐 スマホ・PCで初めて開く場合、または同期エラーが出る場合は認証が必要です。</div>
         <button class="btn-auth" onclick="authenticateGoogle()">会社アカウントで認証を開く</button>
@@ -179,6 +181,10 @@
             <div class="form-group">
                 <label for="itemName">商品名 <span style="color:red;">*</span></label>
                 <input type="text" id="itemName" placeholder="例: エアコン" required>
+            </div>
+            <div class="form-group" id="qtyGroup">
+                <label for="itemQty">登録数量（個数） <span style="color:red;">*</span></label>
+                <input type="number" id="itemQty" class="input-qty" value="1" min="1" max="100">
             </div>
             <div class="form-group">
                 <label for="itemCategory">商品（分類/部材）</label>
@@ -297,7 +303,7 @@
                     <th style="width: 40px;" class="no-print">
                         <input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll(this)">
                     </th>
-                    <th style="width: 50px;">ID</th>
+                    <th style="width: 80px;">管理ID</th>
                     <th style="width: 80px;">状況</th>
                     <th>法人名</th>
                     <th>商品名</th>
@@ -392,20 +398,18 @@
     const GAS_URL = "https://script.google.com/a/macros/suntac.jp/s/AKfycbwmp9YXGaMB6V95HXagj34iiCJAzM1zHhLH9jgNIgXiBqtrSssMk264A0piYVu13LQP/exec";
 
     let inventory = [];
-    let nextId = 1;
+    let nextBaseId = 101;
     let isEditing = false;
     let activeFilterValue = null; 
     let currentViewMode = 'normal';
     let expandedGroups = {};
     let selectedIds = new Set();
 
-    // 🔐 別タブでGASを開いて認証を通す関数
     function authenticateGoogle() {
         window.open(GAS_URL, '_blank');
         alert("開いたタブで会社のGoogleアカウントでログイン/アクセスを許可してください。\n完了後、この画面に戻り「最新データに更新」を押してください。");
     }
 
-    // ☁️ クラウドからデータ取得
     async function fetchCloudData() {
         const syncStatus = document.getElementById("syncStatus");
         syncStatus.innerText = "☁️ スプレッドシートからデータを取得中...";
@@ -416,7 +420,7 @@
             const data = await response.json();
             
             inventory = data.map(item => ({
-                id: parseInt(item["管理ID"]) || 0,
+                id: String(item["管理ID"] || "").trim(), // 文字列に強制変換・空白除去
                 company: item["法人名"] || "",
                 name: item["商品名"] || "",
                 category: item["部材(分類)"] || "",
@@ -427,21 +431,38 @@
                 usedDate: item["使用日"] || "",
                 usedLocation: item["使用場所"] || "",
                 notes: item["備考"] || ""
-            })).filter(item => item.id > 0);
+            })).filter(item => item.id !== "");
 
-            nextId = inventory.length > 0 ? Math.max(...inventory.map(item => item.id)) + 1 : 1;
+            calcNextBaseId();
             syncStatus.innerText = "✅ クラウドと正常に同期されています";
             renderInventory();
         } catch (error) {
             console.error("クラウド同期エラー:", error);
             syncStatus.innerText = "⚠️ クラウド未認証または読み込み失敗（黄色い認証ボタンをお試しください）";
             inventory = JSON.parse(localStorage.getItem('office_inventory')) || [];
-            nextId = inventory.length > 0 ? Math.max(...inventory.map(item => item.id)) + 1 : 1;
+            // IDを文字列に統一
+            inventory.forEach(i => i.id = String(i.id).trim());
+            calcNextBaseId();
             renderInventory();
         }
     }
 
-    // ☁️ クラウドへ保存
+    function calcNextBaseId() {
+        if (inventory.length === 0) {
+            nextBaseId = 101;
+            return;
+        }
+        let maxId = 100;
+        inventory.forEach(item => {
+            const baseStr = String(item.id).split('-')[0];
+            const num = parseInt(baseStr, 10);
+            if (!isNaN(num) && num > maxId) {
+                maxId = num;
+            }
+        });
+        nextBaseId = maxId + 1;
+    }
+
     async function saveCloudData() {
         const syncStatus = document.getElementById("syncStatus");
         syncStatus.innerText = "☁️ クラウドへ自動保存中...";
@@ -487,7 +508,7 @@
         const checkboxes = document.querySelectorAll('.item-checkbox');
         checkboxes.forEach(cb => {
             cb.checked = masterCheckbox.checked;
-            const id = parseInt(cb.dataset.id);
+            const id = String(cb.dataset.id);
             if (masterCheckbox.checked) { selectedIds.add(id); } 
             else { selectedIds.delete(id); }
         });
@@ -495,8 +516,9 @@
     }
 
     function handleCheckboxChange(cb, id) {
-        if (cb.checked) { selectedIds.add(id); } 
-        else { selectedIds.delete(id); document.getElementById('selectAllCheckbox').checked = false; }
+        const strId = String(id);
+        if (cb.checked) { selectedIds.add(strId); } 
+        else { selectedIds.delete(strId); document.getElementById('selectAllCheckbox').checked = false; }
         updateBulkBar();
     }
 
@@ -598,13 +620,14 @@
             statusBadge = `<span class="badge badge-keep">保管中</span>`;
         }
         
-        const isChecked = selectedIds.has(item.id) ? "checked" : "";
+        const strId = String(item.id);
+        const isChecked = selectedIds.has(strId) ? "checked" : "";
 
         tr.innerHTML = `
             <td class="no-print">
-                <input type="checkbox" class="item-checkbox" data-id="${item.id}" ${isChecked} onchange="handleCheckboxChange(this, ${item.id})">
+                <input type="checkbox" class="item-checkbox" data-id="${strId}" ${isChecked} onchange="handleCheckboxChange(this, '${strId}')">
             </td>
-            <td>${item.id}</td>
+            <td><strong>${escapeHtml(strId)}</strong></td>
             <td>${statusBadge}</td>
             <td><strong>${escapeHtml(item.company || '-')}</strong></td>
             <td><strong>${escapeHtml(item.name)}</strong></td>
@@ -616,10 +639,10 @@
             <td>${usedDetail}</td>
             <td>${escapeHtml(item.notes || '-')}</td>
             <td class="no-print">
-                <button class="btn-row btn-row-edit" onclick="startEdit(${item.id})">編集</button>
-                <button class="btn-row btn-row-clone" onclick="cloneItem(${item.id})">複製</button>
-                ${item.plan !== "使用済み" ? `<button class="btn-row btn-row-used" onclick="openUsedModal(${item.id})">使用済</button>` : ''}
-                <button class="btn-row btn-row-del" onclick="deleteItem(${item.id})">削除</button>
+                <button class="btn-row btn-row-edit" onclick="startEdit('${strId}')">編集</button>
+                <button class="btn-row btn-row-clone" onclick="cloneItem('${strId}')">複製</button>
+                ${item.plan !== "使用済み" ? `<button class="btn-row btn-row-used" onclick="openUsedModal('${strId}')">使用済</button>` : ''}
+                <button class="btn-row btn-row-del" onclick="deleteItem('${strId}')">削除</button>
             </td>
         `;
         return tr;
@@ -676,9 +699,10 @@
     }
 
     function openUsedModal(id) {
+        const strId = String(id);
         document.getElementById("isBulkUsed").value = "false";
-        document.getElementById("modalItemId").value = id;
-        document.getElementById("usedModalTitle").innerText = "使用情報の入力";
+        document.getElementById("modalItemId").value = strId;
+        document.getElementById("usedModalTitle").innerText = `使用情報の入力 (ID: ${strId})`;
         const today = new Date().toISOString().split('T')[0];
         document.getElementById("modalUsedDate").value = today;
         document.getElementById("modalUsedLocation").value = "";
@@ -704,7 +728,7 @@
 
         if (isBulk) {
             inventory.forEach(item => {
-                if (selectedIds.has(item.id)) {
+                if (selectedIds.has(String(item.id))) {
                     item.plan = "使用済み";
                     item.usedDate = usedDate;
                     item.usedLocation = usedLoc || "使用先未記録";
@@ -713,8 +737,8 @@
             selectedIds.clear();
             alert("選択したデータを一括で使用済みに設定しました。");
         } else {
-            const id = parseInt(document.getElementById("modalItemId").value);
-            const item = inventory.find(i => i.id === id);
+            const id = String(document.getElementById("modalItemId").value);
+            const item = inventory.find(i => String(i.id) === id);
             if (item) {
                 item.plan = "使用済み";
                 item.usedDate = usedDate;
@@ -751,7 +775,7 @@
 
         let updatedCount = 0;
         inventory.forEach(item => {
-            if (selectedIds.has(item.id)) {
+            if (selectedIds.has(String(item.id))) {
                 if (company) item.company = company;
                 if (name) item.name = name;
                 if (category) item.category = category;
@@ -773,7 +797,7 @@
     function bulkDelete() {
         if (selectedIds.size === 0) return;
         if (confirm(`選択した ${selectedIds.size} 件のデータを本当に一括削除しますか？`)) {
-            inventory = inventory.filter(item => !selectedIds.has(item.id));
+            inventory = inventory.filter(item => !selectedIds.has(String(item.id)));
             selectedIds.clear();
             renderInventory();
             saveCloudData();
@@ -792,6 +816,7 @@
     function addItem() {
         const company = document.getElementById("companyName").value.trim();
         const name = document.getElementById("itemName").value.trim();
+        const qty = parseInt(document.getElementById("itemQty").value, 10) || 1;
         const category = document.getElementById("itemCategory").value.trim();
         const model = document.getElementById("itemModel").value.trim();
         const store = document.getElementById("removeStore").value.trim();
@@ -803,24 +828,43 @@
 
         if (name === "") { alert("商品名は必須入力です。"); return; }
 
-        inventory.push({
-            id: nextId++, company: company, name: name, category: category, model: model,
-            store: store, date: date, plan: plan, 
-            usedDate: plan === "使用済み" ? usedDate : "",
-            usedLocation: plan === "使用済み" ? usedLocation : "",
-            notes: notes
-        });
+        const currentBase = nextBaseId++;
+
+        if (qty === 1) {
+            const singleId = `${currentBase}-1`;
+            inventory.push({
+                id: singleId, company: company, name: name, category: category, model: model,
+                store: store, date: date, plan: plan, 
+                usedDate: plan === "使用済み" ? usedDate : "",
+                usedLocation: plan === "使用済み" ? usedLocation : "",
+                notes: notes
+            });
+        } else {
+            for (let i = 1; i <= qty; i++) {
+                const subId = `${currentBase}-${i}`;
+                inventory.push({
+                    id: subId, company: company, name: name, category: category, model: model,
+                    store: store, date: date, plan: plan, 
+                    usedDate: plan === "使用済み" ? usedDate : "",
+                    usedLocation: plan === "使用済み" ? usedLocation : "",
+                    notes: notes
+                });
+            }
+            alert(`${qty} 件の個別データ（管理ID: ${currentBase}-1 〜 ${currentBase}-${qty}）に展開して登録しました！`);
+        }
 
         clearForm();
         renderInventory();
         saveCloudData();
     }
 
+    // 💡 管理IDの型を揃えて検索する（1〜8も確実にヒット）
     function startEdit(id) {
-        const item = inventory.find(i => i.id === id);
+        const strTargetId = String(id).trim();
+        const item = inventory.find(i => String(i.id).trim() === strTargetId);
         if (!item) return;
 
-        document.getElementById("editItemId").value = item.id;
+        document.getElementById("editItemId").value = String(item.id);
         document.getElementById("companyName").value = item.company || "";
         document.getElementById("itemName").value = item.name;
         document.getElementById("itemCategory").value = item.category;
@@ -831,6 +875,8 @@
         document.getElementById("itemNotes").value = item.notes;
         document.getElementById("usedDate").value = item.usedDate || "";
         document.getElementById("usedLocation").value = item.usedLocation || "";
+
+        document.getElementById("qtyGroup").style.display = "none";
 
         toggleFormUsedFields();
 
@@ -847,7 +893,7 @@
     }
 
     function saveEdit() {
-        const id = parseInt(document.getElementById("editItemId").value);
+        const id = String(document.getElementById("editItemId").value).trim();
         const company = document.getElementById("companyName").value.trim();
         const name = document.getElementById("itemName").value.trim();
         const category = document.getElementById("itemCategory").value.trim();
@@ -861,7 +907,7 @@
 
         if (name === "") { alert("商品名は必須入力です。"); return; }
 
-        const itemIndex = inventory.findIndex(i => i.id === id);
+        const itemIndex = inventory.findIndex(i => String(i.id).trim() === id);
         if (itemIndex > -1) {
             inventory[itemIndex] = {
                 id: id, company: company, name: name, category: category, model: model,
@@ -880,6 +926,7 @@
     function cancelEdit() {
         isEditing = false;
         clearForm();
+        document.getElementById("qtyGroup").style.display = "flex";
         document.getElementById("formSection").classList.remove("edit-mode");
         document.getElementById("formActionTitle").innerText = "📋 新規商品・撤去品登録";
         const btnSubmit = document.getElementById("btnSubmit");
@@ -890,13 +937,15 @@
     }
 
     function cloneItem(id) {
-        const item = inventory.find(i => i.id === id);
+        const strTargetId = String(id).trim();
+        const item = inventory.find(i => String(i.id).trim() === strTargetId);
         if (!item) return;
 
         if (isEditing) cancelEdit();
 
         document.getElementById("companyName").value = item.company || "";
         document.getElementById("itemName").value = item.name;
+        document.getElementById("itemQty").value = "1";
         document.getElementById("itemCategory").value = item.category;
         document.getElementById("itemModel").value = item.model;
         document.getElementById("removeStore").value = item.store;
@@ -912,9 +961,10 @@
     }
 
     function deleteItem(id) {
-        if (confirm("このデータを削除してもよろしいですか？")) {
-            if (isEditing && parseInt(document.getElementById("editItemId").value) === id) { cancelEdit(); }
-            inventory = inventory.filter(item => item.id !== id);
+        const strTargetId = String(id).trim();
+        if (confirm(`管理ID: ${strTargetId} のデータを削除してもよろしいですか？`)) {
+            if (isEditing && String(document.getElementById("editItemId").value).trim() === strTargetId) { cancelEdit(); }
+            inventory = inventory.filter(item => String(item.id).trim() !== strTargetId);
             renderInventory();
             saveCloudData();
         }
@@ -924,6 +974,7 @@
         document.getElementById("editItemId").value = "";
         document.getElementById("companyName").value = "";
         document.getElementById("itemName").value = "";
+        document.getElementById("itemQty").value = "1";
         document.getElementById("itemCategory").value = "";
         document.getElementById("itemModel").value = "";
         document.getElementById("removeStore").value = "";
@@ -975,11 +1026,16 @@
                 for (let i = 1; i < lines.length; i++) {
                     const row = lines[i];
                     if (row.length < 2 || !row[2]) continue;
+                    
+                    let impId = String(row[0] || "").trim();
+                    if (!impId) { impId = `${nextBaseId++}-1`; }
+
                     inventory.push({
-                        id: nextId++, company: row[1] || "", name: row[2] || "", category: row[3] || "", model: row[4] || "",
+                        id: impId, company: row[1] || "", name: row[2] || "", category: row[3] || "", model: row[4] || "",
                         store: row[5] || "", date: row[6] || "", plan: row[7] || "未定", usedDate: row[8] || "", usedLocation: row[9] || "", notes: row[10] || ""
                     });
                 }
+                calcNextBaseId();
                 renderInventory();
                 saveCloudData();
                 alert("CSVからインポートしました。");
@@ -1017,7 +1073,6 @@
         return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}_${String(d.getHours()).padStart(2, '0')}${String(d.getMinutes()).padStart(2, '0')}${String(d.getSeconds()).padStart(2, '0')}`;
     }
 
-    // 🚀 初期読み込み実行
     fetchCloudData();
 </script>
 
