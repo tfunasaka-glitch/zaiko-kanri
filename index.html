@@ -89,26 +89,22 @@
         th, td { padding: 12px; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 14px; }
         th { background-color: #34495e; color: white; position: sticky; top: 0; }
         
-        /* 行選択スタイル */
         tr.selected-row { background-color: #ebf8ff !important; }
         tr:hover { background-color: #f8fafc; }
         
-        /* まとめ親行のスタイル */
         tr.group-parent-row { background-color: #f1f5f9; font-weight: bold; cursor: pointer; }
         tr.group-parent-row:hover { background-color: #e2e8f0; }
         .toggle-icon { display: inline-block; width: 18px; font-size: 12px; color: #64748b; transition: transform 0.2s; }
         
-        /* 枝番子行のスタイル */
         tr.group-child-row { background-color: #ffffff; }
         tr.group-child-row td:first-child { padding-left: 20px; }
         .child-indent { display: inline-block; width: 15px; color: #cbd5e1; }
 
-        /* バッジ表示の修正（つぶれ防止） */
         .status-cell-wrapper {
             display: flex;
             align-items: center;
             gap: 6px;
-            white-space: nowrap; /* 改行を禁止 */
+            white-space: nowrap;
         }
 
         .badge { display: inline-block; padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: bold; text-align: center; white-space: nowrap; }
@@ -128,10 +124,11 @@
         .no-data { text-align: center; color: #94a3b8; padding: 30px; }
 
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); display: flex; justify-content: center; align-items: center; z-index: 1000; }
-        .modal-content { background: #fff; padding: 25px; border-radius: 8px; width: 90%; max-width: 500px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); max-height: 90vh; overflow-y: auto; }
+        .modal-content { background: #fff; padding: 25px; border-radius: 8px; width: 90%; max-width: 550px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); max-height: 90vh; overflow-y: auto; }
         .modal-content h3 { margin-top: 0; color: #2c3e50; border-bottom: 2px solid #3182ce; padding-bottom: 8px; }
         .modal-form-group { margin-bottom: 12px; display: flex; flex-direction: column; }
-        .modal-form-group label { font-weight: bold; font-size: 13px; margin-bottom: 4px; color: #475569; }
+        .modal-form-group label { font-weight: bold; font-size: 13px; margin-bottom: 4px; color: #475569; display: flex; justify-content: space-between; align-items: center; }
+        .clear-check-label { font-size: 12px; color: #e53e3e; font-weight: normal; cursor: pointer; display: flex; align-items: center; gap: 3px; }
         .modal-btns { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
         .btn-modal-save { background-color: #3182ce; color: white; border: none; padding: 8px 16px; border-radius: 4px; }
         .btn-modal-cancel { background-color: #95a5a6; color: white; border: none; padding: 8px 16px; border-radius: 4px; }
@@ -284,7 +281,7 @@
         <div class="bulk-title">⚡ チェックした <span id="selectedCount">0</span> 件のデータに対する一括操作：</div>
         <div class="bulk-btns">
             <button class="btn-bulk-used" onclick="openBulkUsedModal()">一括で使用済みにする</button>
-            <button class="btn-bulk-edit" onclick="openBulkEditModal()">一括編集（項目上書き）</button>
+            <button class="btn-bulk-edit" onclick="openBulkEditModal()">一括編集（項目上書き/クリア）</button>
             <button class="btn-bulk-del" onclick="bulkDelete()">一括削除</button>
         </div>
     </div>
@@ -340,34 +337,62 @@
     </div>
 </div>
 
-<!-- モーダル2：一括編集用 -->
+<!-- モーダル2：一括編集（空欄クリア対応） -->
 <div id="bulkEditModal" class="modal-overlay" style="display: none;">
     <div class="modal-content">
-        <h3>一括編集（選択データの上書き）</h3>
-        <p style="font-size:12px; color:#64748b; margin-top:-5px; margin-bottom:15px;">※入力した項目だけが一括上書きされます。空欄の項目は元のデータが保持されます。</p>
+        <h3>一括編集（項目上書き / 削除）</h3>
+        <p style="font-size:12px; color:#64748b; margin-top:-5px; margin-bottom:15px;">
+            ※文字を入力すると上書きされます。<br>
+            ※現在登録されている内容を消去したい場合は、右側の <strong>「クリア（空欄にする）」</strong> にチェックを入れてください。
+        </p>
         
         <div class="modal-form-group">
-            <label for="bulkCompany">法人名</label>
+            <label>
+                <span>法人名</span>
+                <label class="clear-check-label"><input type="checkbox" id="clearBulkCompany"> クリア（空欄にする）</label>
+            </label>
             <input type="text" id="bulkCompany" placeholder="変更しない場合は空欄">
         </div>
         <div class="modal-form-group">
-            <label for="bulkName">商品名</label>
+            <label>
+                <span>商品名</span>
+                <label class="clear-check-label"><input type="checkbox" id="clearBulkName"> クリア（空欄にする）</label>
+            </label>
             <input type="text" id="bulkName" placeholder="変更しない場合は空欄">
         </div>
         <div class="modal-form-group">
-            <label for="bulkCategory">部材（分類）</label>
+            <label>
+                <span>部材（分類）</span>
+                <label class="clear-check-label"><input type="checkbox" id="clearBulkCategory"> クリア（空欄にする）</label>
+            </label>
             <input type="text" id="bulkCategory" placeholder="変更しない場合は空欄">
         </div>
         <div class="modal-form-group">
-            <label for="bulkStore">撤去店舗</label>
+            <label>
+                <span>型式</span>
+                <label class="clear-check-label"><input type="checkbox" id="clearBulkModel"> クリア（空欄にする）</label>
+            </label>
+            <input type="text" id="bulkModel" placeholder="変更しない場合は空欄">
+        </div>
+        <div class="modal-form-group">
+            <label>
+                <span>撤去店舗</span>
+                <label class="clear-check-label"><input type="checkbox" id="clearBulkStore"> クリア（空欄にする）</label>
+            </label>
             <input type="text" id="bulkStore" placeholder="変更しない場合は空欄">
         </div>
         <div class="modal-form-group">
-            <label for="bulkDate">撤去日付</label>
+            <label>
+                <span>撤去日付</span>
+                <label class="clear-check-label"><input type="checkbox" id="clearBulkDate"> クリア（空欄にする）</label>
+            </label>
             <input type="date" id="bulkDate">
         </div>
         <div class="modal-form-group">
-            <label for="bulkPlan">使用予定</label>
+            <label>
+                <span>使用予定</span>
+                <label class="clear-check-label"><input type="checkbox" id="clearBulkPlan"> クリア（空欄にする）</label>
+            </label>
             <select id="bulkPlan">
                 <option value="">（変更しない）</option>
                 <option value="未定">未定</option>
@@ -377,7 +402,10 @@
             </select>
         </div>
         <div class="modal-form-group">
-            <label for="bulkNotes">備考</label>
+            <label>
+                <span>備考</span>
+                <label class="clear-check-label"><input type="checkbox" id="clearBulkNotes"> クリア（空欄にする）</label>
+            </label>
             <input type="text" id="bulkNotes" placeholder="変更しない場合は空欄">
         </div>
 
@@ -901,37 +929,60 @@
         document.getElementById("bulkCompany").value = "";
         document.getElementById("bulkName").value = "";
         document.getElementById("bulkCategory").value = "";
+        document.getElementById("bulkModel").value = "";
         document.getElementById("bulkStore").value = "";
         document.getElementById("bulkDate").value = "";
         document.getElementById("bulkPlan").value = "";
         document.getElementById("bulkNotes").value = "";
+
+        document.getElementById("clearBulkCompany").checked = false;
+        document.getElementById("clearBulkName").checked = false;
+        document.getElementById("clearBulkCategory").checked = false;
+        document.getElementById("clearBulkModel").checked = false;
+        document.getElementById("clearBulkStore").checked = false;
+        document.getElementById("clearBulkDate").checked = false;
+        document.getElementById("clearBulkPlan").checked = false;
+        document.getElementById("clearBulkNotes").checked = false;
+
         document.getElementById("bulkEditModal").style.display = "flex";
     };
 
     window.closeBulkEditModal = function() { document.getElementById("bulkEditModal").style.display = "none"; };
 
+    // 一括編集の実行（文字上書き ＆ クリアチェック処理）
     window.executeBulkEdit = async function() {
         const company = document.getElementById("bulkCompany").value.trim();
         const name = document.getElementById("bulkName").value.trim();
         const category = document.getElementById("bulkCategory").value.trim();
+        const model = document.getElementById("bulkModel").value.trim();
         const store = document.getElementById("bulkStore").value.trim();
         const date = document.getElementById("bulkDate").value;
         const plan = document.getElementById("bulkPlan").value;
         const notes = document.getElementById("bulkNotes").value.trim();
 
+        const clearCompany = document.getElementById("clearBulkCompany").checked;
+        const clearName = document.getElementById("clearBulkName").checked;
+        const clearCategory = document.getElementById("clearBulkCategory").checked;
+        const clearModel = document.getElementById("clearBulkModel").checked;
+        const clearStore = document.getElementById("clearBulkStore").checked;
+        const clearDate = document.getElementById("clearBulkDate").checked;
+        const clearPlan = document.getElementById("clearBulkPlan").checked;
+        const clearNotes = document.getElementById("clearBulkNotes").checked;
+
         const targets = window.inventory.filter(item => window.selectedIds.has(String(item.id)));
         targets.forEach(item => {
-            if (company) item.company = company;
-            if (name) item.name = name;
-            if (category) item.category = category;
-            if (store) item.store = store;
-            if (date) item.date = date;
-            if (plan) item.plan = plan;
-            if (notes) item.notes = notes;
+            if (clearCompany) item.company = ""; else if (company) item.company = company;
+            if (clearName) item.name = ""; else if (name) item.name = name;
+            if (clearCategory) item.category = ""; else if (category) item.category = category;
+            if (clearModel) item.model = ""; else if (model) item.model = model;
+            if (clearStore) item.store = ""; else if (store) item.store = store;
+            if (clearDate) item.date = ""; else if (date) item.date = date;
+            if (clearPlan) item.plan = "未定"; else if (plan) item.plan = plan;
+            if (clearNotes) item.notes = ""; else if (notes) item.notes = notes;
         });
 
         await saveBatchToCloud(targets);
-        alert(`${targets.length} 件のデータを一括更新しました。`);
+        alert(`${targets.length} 件のデータを一括更新（消去）しました。`);
         window.selectedIds.clear();
         window.closeBulkEditModal();
     };
