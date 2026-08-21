@@ -11,6 +11,7 @@
             color: #333;
             margin: 0;
             padding: 20px;
+            user-select: none; /* ドラッグ選択時のテキスト選択防止 */
         }
         .container {
             max-width: 1400px;
@@ -83,20 +84,29 @@
         .btn-bulk-edit { background-color: #3182ce; color: white; border: none; padding: 8px 14px; border-radius: 4px; }
         .btn-bulk-del { background-color: #e53e3e; color: white; border: none; padding: 8px 14px; border-radius: 4px; }
 
-        .group-header-row { background-color: #f1f5f9 !important; font-weight: bold; color: #1e293b; font-size: 15px; cursor: pointer; user-select: none; transition: background-color 0.2s; }
-        .group-header-row:hover { background-color: #e2e8f0 !important; }
-        .group-header-cell { padding: 12px 15px !important; border-left: 5px solid #34495e; display: flex; align-items: center; justify-content: space-between; }
-        .group-icon { font-size: 12px; margin-right: 8px; color: #64748b; }
-
-        .table-responsive { overflow-x: auto; margin-top: 10px; }
+        .table-responsive { overflow-x: auto; margin-top: 10px; position: relative; }
         table { width: 100%; border-collapse: collapse; min-width: 1400px; }
         th, td { padding: 12px; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 14px; }
         th { background-color: #34495e; color: white; position: sticky; top: 0; }
+        
+        /* 行選択スタイル */
+        tr.selected-row { background-color: #ebf8ff !important; }
         tr:hover { background-color: #f8fafc; }
         
+        /* まとめ親行のスタイル */
+        tr.group-parent-row { background-color: #f1f5f9; font-weight: bold; cursor: pointer; }
+        tr.group-parent-row:hover { background-color: #e2e8f0; }
+        .toggle-icon { display: inline-block; width: 18px; font-size: 12px; color: #64748b; transition: transform 0.2s; }
+        
+        /* 枝番子行のスタイル */
+        tr.group-child-row { background-color: #ffffff; }
+        tr.group-child-row td:first-child { padding-left: 20px; }
+        .child-indent { display: inline-block; width: 15px; color: #cbd5e1; }
+
         .badge { display: inline-block; padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: bold; text-align: center; }
         .badge-keep { background-color: #d1fae5; color: #065f46; }
         .badge-used { background-color: #e2e8f0; color: #475569; }
+        .badge-count { background-color: #3b82f6; color: white; border-radius: 10px; padding: 2px 8px; font-size: 12px; margin-left: 5px; }
 
         tr.status-used { background-color: #f8fafc; color: #64748b; }
         tr.status-used td strong { color: #64748b; }
@@ -254,7 +264,8 @@
     <div class="view-mode-bar no-print">
         <div class="view-mode-title">👁️ 一覧の表示切り替え：</div>
         <div class="view-btn-group">
-            <button class="btn-view-mode active" id="btnViewNormal" onclick="changeViewMode('normal')">通常表示（標準）</button>
+            <button class="btn-view-mode active" id="btnViewNormal" onclick="changeViewMode('normal')">同データ統合表示</button>
+            <button class="btn-view-mode" id="btnViewAll" onclick="changeViewMode('all')">全件フラット表示</button>
             <button class="btn-view-mode" id="btnViewCategory" onclick="changeViewMode('category')">部材（分類）でまとめる</button>
             <button class="btn-view-mode" id="btnViewCompany" onclick="changeViewMode('company')">法人名でまとめる</button>
         </div>
@@ -271,15 +282,15 @@
     </div>
 
     <!-- 一覧表示テーブル -->
-    <div class="table-responsive">
+    <div class="table-responsive" id="tableContainer">
         <table>
             <thead>
                 <tr>
                     <th style="width: 40px;" class="no-print">
                         <input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll(this)">
                     </th>
-                    <th style="width: 80px;">管理ID</th>
-                    <th style="width: 80px;">状況</th>
+                    <th style="width: 100px;">管理ID</th>
+                    <th style="width: 90px;">状況</th>
                     <th>法人名</th>
                     <th>商品名</th>
                     <th>部材(分類)</th>
@@ -374,7 +385,6 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-    // 取得いただいた Firebase 設定情報をセット
     const firebaseConfig = {
         apiKey: "AIzaSyBW_e_a5V14R0tIF5nBeyr3gSD_-KXJHOQ",
         authDomain: "zaiko-app-d37a3.firebaseapp.com",
@@ -392,11 +402,12 @@
     window.nextBaseId = 101;
     window.isEditing = false;
     window.activeFilterValue = null; 
-    window.currentViewMode = 'normal';
-    window.expandedGroups = {};
+    window.currentViewMode = 'normal'; // 'normal'(同データ統合), 'all'(全件表示), 'category', 'company'
+    window.expandedGroups = {}; // グループの展開状態
+    window.expandedSameGroups = {}; // 同一データの展開状態
     window.selectedIds = new Set();
 
-    // ⚡ クラウドからリアルタイムで自動同期（誰かが追加・変更すると即座に反映）
+    // ⚡ クラウドからリアルタイムで自動同期
     onSnapshot(inventoryCol, (snapshot) => {
         window.inventory = [];
         snapshot.forEach((doc) => {
@@ -427,7 +438,6 @@
         window.nextBaseId = maxId + 1;
     }
 
-    // クラウド保存用関数
     async function saveSingleItemToCloud(item) {
         try {
             await setDoc(doc(db, "inventory", String(item.id)), item);
@@ -465,6 +475,7 @@
         window.expandedGroups = {};
         document.querySelectorAll('.btn-view-mode').forEach(b => b.classList.remove('active'));
         if (mode === 'normal') document.getElementById('btnViewNormal').classList.add('active');
+        if (mode === 'all') document.getElementById('btnViewAll').classList.add('active');
         if (mode === 'category') document.getElementById('btnViewCategory').classList.add('active');
         if (mode === 'company') document.getElementById('btnViewCompany').classList.add('active');
         renderInventory();
@@ -475,22 +486,82 @@
         renderInventory();
     };
 
+    window.toggleSameGroup = function(groupKey) {
+        window.expandedSameGroups[groupKey] = !window.expandedSameGroups[groupKey];
+        renderInventory();
+    };
+
+    // ① 同一データまとめ表示用キー生成関数
+    function generateItemSignature(item) {
+        if (item.plan === "使用済み") {
+            // 使用済みは個別管理の価値が高いため、個別キー（統合しない）
+            return `USED_${item.id}`;
+        }
+        return `${item.company || ''}_${item.name || ''}_${item.category || ''}_${item.model || ''}_${item.store || ''}_${item.date || ''}_${item.plan || ''}_${item.notes || ''}`;
+    }
+
+    // ---------------------------------------------------------
+    // ② ドラッグ＆ドロップ（ドラッグ選択）機能の実装
+    // ---------------------------------------------------------
+    let isMouseDown = false;
+    let dragSelectState = true; // ドラッグ開始時にチェックを入れるか外すか
+
+    const tableContainer = document.getElementById('tableContainer');
+
+    tableContainer.addEventListener('mousedown', (e) => {
+        const tr = e.target.closest('tr');
+        if (!tr || tr.classList.contains('group-parent-row') || e.target.tagName === 'BUTTON' || e.target.tagName === 'A' || e.target.tagName === 'INPUT') {
+            return;
+        }
+        
+        isMouseDown = true;
+        const cb = tr.querySelector('.item-checkbox');
+        if (cb) {
+            dragSelectState = !cb.checked;
+            setItemSelection(cb, dragSelectState);
+        }
+    });
+
+    tableContainer.addEventListener('mouseover', (e) => {
+        if (!isMouseDown) return;
+        const tr = e.target.closest('tr');
+        if (!tr || tr.classList.contains('group-parent-row')) return;
+
+        const cb = tr.querySelector('.item-checkbox');
+        if (cb) {
+            setItemSelection(cb, dragSelectState);
+        }
+    });
+
+    window.addEventListener('mouseup', () => {
+        isMouseDown = false;
+    });
+
+    function setItemSelection(cb, isSelect) {
+        cb.checked = isSelect;
+        const id = String(cb.dataset.id);
+        const tr = cb.closest('tr');
+        
+        if (isSelect) {
+            window.selectedIds.add(id);
+            if (tr) tr.classList.add('selected-row');
+        } else {
+            window.selectedIds.delete(id);
+            if (tr) tr.classList.remove('selected-row');
+            document.getElementById('selectAllCheckbox').checked = false;
+        }
+        updateBulkBar();
+    }
+
     window.toggleSelectAll = function(masterCheckbox) {
         const checkboxes = document.querySelectorAll('.item-checkbox');
         checkboxes.forEach(cb => {
-            cb.checked = masterCheckbox.checked;
-            const id = String(cb.dataset.id);
-            if (masterCheckbox.checked) { window.selectedIds.add(id); } 
-            else { window.selectedIds.delete(id); }
+            setItemSelection(cb, masterCheckbox.checked);
         });
-        updateBulkBar();
     };
 
     window.handleCheckboxChange = function(cb, id) {
-        const strId = String(id);
-        if (cb.checked) { window.selectedIds.add(strId); } 
-        else { window.selectedIds.delete(strId); document.getElementById('selectAllCheckbox').checked = false; }
-        updateBulkBar();
+        setItemSelection(cb, cb.checked);
     };
 
     function updateBulkBar() {
@@ -500,6 +571,9 @@
         bar.style.display = window.selectedIds.size > 0 ? 'flex' : 'none';
     }
 
+    // ---------------------------------------------------------
+    // 一覧レンダリング処理
+    // ---------------------------------------------------------
     window.renderInventory = function() {
         const tbody = document.getElementById("inventoryBody");
         const noData = document.getElementById("noDataMessage");
@@ -529,7 +603,34 @@
         } else {
             noData.style.display = "none";
 
-            if (window.currentViewMode === 'category' || window.currentViewMode === 'company') {
+            if (window.currentViewMode === 'normal') {
+                // ① まったく同じデータを自動統合して表示するモード
+                const sameGroups = {};
+                filteredList.forEach(item => {
+                    const sig = generateItemSignature(item);
+                    if (!sameGroups[sig]) sameGroups[sig] = [];
+                    sameGroups[sig].push(item);
+                });
+
+                Object.keys(sameGroups).forEach(sig => {
+                    const items = sameGroups[sig];
+                    if (items.length === 1) {
+                        tbody.appendChild(createRowElement(items[0]));
+                    } else {
+                        // 複数件ある場合は親まとめ行を作成
+                        const parentTr = createSameGroupParentRow(sig, items);
+                        tbody.appendChild(parentTr);
+
+                        const isOpen = !!window.expandedSameGroups[sig];
+                        if (isOpen) {
+                            items.forEach(childItem => {
+                                tbody.appendChild(createRowElement(childItem, true));
+                            });
+                        }
+                    }
+                });
+            } else if (window.currentViewMode === 'category' || window.currentViewMode === 'company') {
+                // 分類・法人名まとめモード
                 const groupKey = window.currentViewMode === 'category' ? 'category' : 'company';
                 const groups = {};
 
@@ -568,6 +669,7 @@
                     }
                 });
             } else {
+                // 全件フラット表示モード
                 filteredList.forEach(item => { tbody.appendChild(createRowElement(item)); });
             }
         }
@@ -576,13 +678,84 @@
         updateBulkBar();
     };
 
-    function createRowElement(item) {
+    // まとめ親行の生成
+    function createSameGroupParentRow(sig, items) {
         const tr = document.createElement("tr");
+        tr.className = "group-parent-row";
+        const isOpen = !!window.expandedSameGroups[sig];
+        const icon = isOpen ? "▼" : "▶";
+        const sample = items[0];
+
+        // 枝番のID範囲表示 (例: 101-1 〜 101-3)
+        const idList = items.map(i => i.id);
+        const displayId = `${idList[0]} 〜 ${idList[idList.length - 1]}`;
+
+        tr.onclick = (e) => {
+            if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'BUTTON') {
+                window.toggleSameGroup(sig);
+            }
+        };
+
+        // 親行のチェックボックス判定（子要素がすべて選択されているか）
+        const allSelected = items.every(i => window.selectedIds.has(String(i.id)));
+
+        tr.innerHTML = `
+            <td class="no-print">
+                <input type="checkbox" ${allSelected ? 'checked' : ''} onchange="toggleSameGroupSelect('${sig}', this.checked)">
+            </td>
+            <td>
+                <span class="toggle-icon">${icon}</span>
+                <strong>${escapeHtml(displayId)}</strong>
+            </td>
+            <td><span class="badge badge-keep">保管中</span> <span class="badge-count">全 ${items.length} 件</span></td>
+            <td><strong>${escapeHtml(sample.company || '-')}</strong></td>
+            <td><strong>${escapeHtml(sample.name)}</strong></td>
+            <td>${escapeHtml(sample.category || '-')}</td>
+            <td>${escapeHtml(sample.model || '-')}</td>
+            <td>${escapeHtml(sample.store || '-')}</td>
+            <td>${escapeHtml(sample.date || '-')}</td>
+            <td>${escapeHtml(sample.plan || '-')}</td>
+            <td>-</td>
+            <td>${escapeHtml(sample.notes || '-')}</td>
+            <td class="no-print">
+                <button class="btn-row btn-row-edit" onclick="window.startEditGroup('${sig}')">一括編集</button>
+                <button class="btn-row btn-row-del" onclick="window.deleteGroup('${sig}')">一括削除</button>
+            </td>
+        `;
+        return tr;
+    }
+
+    // まとめ親行からの全選択
+    window.toggleSameGroupSelect = function(sig, isChecked) {
+        const sameGroups = getSameGroupsMap();
+        const items = sameGroups[sig] || [];
+        items.forEach(item => {
+            const strId = String(item.id);
+            if (isChecked) window.selectedIds.add(strId);
+            else window.selectedIds.delete(strId);
+        });
+        renderInventory();
+    };
+
+    function getSameGroupsMap() {
+        const sameGroups = {};
+        window.inventory.forEach(item => {
+            const sig = generateItemSignature(item);
+            if (!sameGroups[sig]) sameGroups[sig] = [];
+            sameGroups[sig].push(item);
+        });
+        return sameGroups;
+    }
+
+    function createRowElement(item, isChild = false) {
+        const tr = document.createElement("tr");
+        if (isChild) tr.className = "group-child-row";
+
         let statusBadge = "";
         let usedDetail = "-";
 
         if (item.plan === "使用済み") {
-            tr.className = "status-used";
+            tr.className += " status-used";
             statusBadge = `<span class="badge badge-used">使用済</span>`;
             const uDate = item.usedDate || "日付不明";
             const uLoc = item.usedLocation || "場所未記録";
@@ -592,13 +765,14 @@
         }
         
         const strId = String(item.id);
-        const isChecked = window.selectedIds.has(strId) ? "checked" : "";
+        const isChecked = window.selectedIds.has(strId);
+        if (isChecked) tr.classList.add('selected-row');
 
         tr.innerHTML = `
             <td class="no-print">
-                <input type="checkbox" class="item-checkbox" data-id="${strId}" ${isChecked} onchange="window.handleCheckboxChange(this, '${strId}')">
+                <input type="checkbox" class="item-checkbox" data-id="${strId}" ${isChecked ? 'checked' : ''} onchange="window.handleCheckboxChange(this, '${strId}')">
             </td>
-            <td><strong>${escapeHtml(strId)}</strong></td>
+            <td>${isChild ? '<span class="child-indent">└</span>' : ''}<strong>${escapeHtml(strId)}</strong></td>
             <td>${statusBadge}</td>
             <td><strong>${escapeHtml(item.company || '-')}</strong></td>
             <td><strong>${escapeHtml(item.name)}</strong></td>
@@ -769,6 +943,28 @@
             });
             await batch.commit();
             window.selectedIds.clear();
+        }
+    };
+
+    window.startEditGroup = function(sig) {
+        const sameGroups = getSameGroupsMap();
+        const items = sameGroups[sig] || [];
+        if (items.length > 0) {
+            window.selectedIds.clear();
+            items.forEach(i => window.selectedIds.add(String(i.id)));
+            window.openBulkEditModal();
+        }
+    };
+
+    window.deleteGroup = async function(sig) {
+        const sameGroups = getSameGroupsMap();
+        const items = sameGroups[sig] || [];
+        if (items.length > 0 && confirm(`まとまった ${items.length} 件のデータをすべて削除しますか？`)) {
+            const batch = writeBatch(db);
+            items.forEach(i => {
+                batch.delete(doc(db, "inventory", String(i.id)));
+            });
+            await batch.commit();
         }
     };
 
