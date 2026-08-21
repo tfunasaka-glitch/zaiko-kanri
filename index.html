@@ -305,7 +305,7 @@
                     <th>使用予定</th>
                     <th>使用日 / 場所</th>
                     <th>備考</th>
-                    <th style="width: 220px;" class="no-print">操作</th>
+                    <th style="width: 250px;" class="no-print">操作</th>
                 </tr>
             </thead>
             <tbody id="inventoryBody">
@@ -316,12 +316,20 @@
     </div>
 </div>
 
-<!-- モーダル1：使用済み入力 -->
+<!-- モーダル1：使用済み入力（数量指定・一部一括使用済み対応） -->
 <div id="usedModal" class="modal-overlay" style="display: none;">
     <div class="modal-content">
         <h3 id="usedModalTitle">使用情報の入力</h3>
         <input type="hidden" id="modalItemId">
-        <input type="hidden" id="isBulkUsed" value="false">
+        <input type="hidden" id="modalSig">
+        <input type="hidden" id="usedModalMode" value="single"> <!-- 'single', 'bulk', 'groupQty' -->
+        
+        <div class="modal-form-group" id="groupQtyFormGroup" style="display: none;">
+            <label for="modalUsedQty">使用済みにする数量（個数） <span style="color:red;">*</span></label>
+            <input type="number" id="modalUsedQty" value="1" min="1">
+            <span id="groupQtyMaxText" style="font-size:12px; color:#64748b; margin-top:2px;"></span>
+        </div>
+
         <div class="modal-form-group">
             <label for="modalUsedDate">使用日</label>
             <input type="date" id="modalUsedDate">
@@ -745,6 +753,7 @@
             <td>-</td>
             <td>${escapeHtml(sample.notes || '-')}</td>
             <td class="no-print">
+                <button class="btn-row btn-row-used" onclick="window.openGroupQtyUsedModal('${sig}')">一部使用済</button>
                 <button class="btn-row btn-row-edit" onclick="window.startEditGroup('${sig}')">一括編集</button>
                 <button class="btn-row btn-row-del" onclick="window.deleteGroup('${sig}')">一括削除</button>
             </td>
@@ -875,7 +884,8 @@
 
     window.openUsedModal = function(id) {
         const strId = String(id);
-        document.getElementById("isBulkUsed").value = "false";
+        document.getElementById("usedModalMode").value = "single";
+        document.getElementById("groupQtyFormGroup").style.display = "none";
         document.getElementById("modalItemId").value = strId;
         document.getElementById("usedModalTitle").innerText = `使用情報の入力 (ID: ${strId})`;
         const today = new Date().toISOString().split('T')[0];
@@ -886,8 +896,33 @@
 
     window.openBulkUsedModal = function() {
         if (window.selectedIds.size === 0) return;
-        document.getElementById("isBulkUsed").value = "true";
+        document.getElementById("usedModalMode").value = "bulk";
+        document.getElementById("groupQtyFormGroup").style.display = "none";
         document.getElementById("usedModalTitle").innerText = `一括使用済み処理 (${window.selectedIds.size} 件)`;
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById("modalUsedDate").value = today;
+        document.getElementById("modalUsedLocation").value = "";
+        document.getElementById("usedModal").style.display = "flex";
+    };
+
+    // 同一データまとめ行からの「一部使用済み（数量指定）」モーダルオープン
+    window.openGroupQtyUsedModal = function(sig) {
+        const sameGroups = getSameGroupsMap();
+        const items = sameGroups[sig] || [];
+        if (items.length === 0) return;
+
+        document.getElementById("usedModalMode").value = "groupQty";
+        document.getElementById("modalSig").value = sig;
+        document.getElementById("groupQtyFormGroup").style.display = "flex";
+        
+        const sample = items[0];
+        document.getElementById("usedModalTitle").innerText = `数量指定・使用済み設定 (${sample.name})`;
+        
+        const qtyInput = document.getElementById("modalUsedQty");
+        qtyInput.value = "1";
+        qtyInput.max = items.length;
+        document.getElementById("groupQtyMaxText").innerText = `※保管中: 全 ${items.length} 件（指定した個数分だけが使用済みに更新されます）`;
+
         const today = new Date().toISOString().split('T')[0];
         document.getElementById("modalUsedDate").value = today;
         document.getElementById("modalUsedLocation").value = "";
@@ -897,11 +932,32 @@
     window.closeUsedModal = function() { document.getElementById("usedModal").style.display = "none"; };
 
     window.saveUsedModal = async function() {
-        const isBulk = document.getElementById("isBulkUsed").value === "true";
+        const mode = document.getElementById("usedModalMode").value;
         const usedDate = document.getElementById("modalUsedDate").value;
         const usedLoc = document.getElementById("modalUsedLocation").value.trim();
 
-        if (isBulk) {
+        if (mode === "groupQty") {
+            // 数量指定でまとめて使用済み処理
+            const sig = document.getElementById("modalSig").value;
+            const sameGroups = getSameGroupsMap();
+            const items = sameGroups[sig] || [];
+            const reqQty = parseInt(document.getElementById("modalUsedQty").value, 10) || 1;
+
+            if (reqQty <= 0) { alert("1以上の数量を指定してください。"); return; }
+            if (reqQty > items.length) { alert(`最大個数（${items.length}件）を超えています。`); return; }
+
+            // 管理ID順に指定数分だけを更新
+            const targetItems = items.slice(0, reqQty);
+            targetItems.forEach(item => {
+                item.plan = "使用済み";
+                item.usedDate = usedDate;
+                item.usedLocation = usedLoc || "使用先未記録";
+            });
+
+            await saveBatchToCloud(targetItems);
+            alert(`${sampleNameText(targetItems[0])} を ${reqQty} 件使用済みに設定しました。`);
+
+        } else if (mode === "bulk") {
             const targets = window.inventory.filter(item => window.selectedIds.has(String(item.id)));
             targets.forEach(item => {
                 item.plan = "使用済み";
@@ -923,6 +979,10 @@
         }
         window.closeUsedModal();
     };
+
+    function sampleNameText(item) {
+        return item ? item.name : "対象データ";
+    }
 
     window.openBulkEditModal = function() {
         if (window.selectedIds.size === 0) return;
@@ -949,7 +1009,6 @@
 
     window.closeBulkEditModal = function() { document.getElementById("bulkEditModal").style.display = "none"; };
 
-    // 一括編集の実行（文字上書き ＆ クリアチェック処理）
     window.executeBulkEdit = async function() {
         const company = document.getElementById("bulkCompany").value.trim();
         const name = document.getElementById("bulkName").value.trim();
