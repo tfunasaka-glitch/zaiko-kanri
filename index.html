@@ -316,13 +316,13 @@
     </div>
 </div>
 
-<!-- モーダル1：使用済み入力（数量指定・一部一括使用済み対応） -->
+<!-- モーダル1：使用済み入力 -->
 <div id="usedModal" class="modal-overlay" style="display: none;">
     <div class="modal-content">
         <h3 id="usedModalTitle">使用情報の入力</h3>
         <input type="hidden" id="modalItemId">
         <input type="hidden" id="modalSig">
-        <input type="hidden" id="usedModalMode" value="single"> <!-- 'single', 'bulk', 'groupQty' -->
+        <input type="hidden" id="usedModalMode" value="single">
         
         <div class="modal-form-group" id="groupQtyFormGroup" style="display: none;">
             <label for="modalUsedQty">使用済みにする数量（個数） <span style="color:red;">*</span></label>
@@ -658,7 +658,9 @@
 
                         const isOpen = !!window.expandedSameGroups[sig];
                         if (isOpen) {
-                            items.forEach(childItem => {
+                            // ★使用済みデータは自動的に除外して保管中データのみ展開する★
+                            const activeItems = items.filter(i => i.plan !== "使用済み");
+                            activeItems.forEach(childItem => {
                                 tbody.appendChild(createRowElement(childItem, true));
                             });
                         }
@@ -905,7 +907,6 @@
         document.getElementById("usedModal").style.display = "flex";
     };
 
-    // 同一データまとめ行からの「一部使用済み（数量指定）」モーダルオープン
     window.openGroupQtyUsedModal = function(sig) {
         const sameGroups = getSameGroupsMap();
         const items = sameGroups[sig] || [];
@@ -937,7 +938,6 @@
         const usedLoc = document.getElementById("modalUsedLocation").value.trim();
 
         if (mode === "groupQty") {
-            // 数量指定でまとめて使用済み処理
             const sig = document.getElementById("modalSig").value;
             const sameGroups = getSameGroupsMap();
             const items = sameGroups[sig] || [];
@@ -946,7 +946,6 @@
             if (reqQty <= 0) { alert("1以上の数量を指定してください。"); return; }
             if (reqQty > items.length) { alert(`最大個数（${items.length}件）を超えています。`); return; }
 
-            // 管理ID順に指定数分だけを更新
             const targetItems = items.slice(0, reqQty);
             targetItems.forEach(item => {
                 item.plan = "使用済み";
@@ -955,7 +954,7 @@
             });
 
             await saveBatchToCloud(targetItems);
-            alert(`${sampleNameText(targetItems[0])} を ${reqQty} 件使用済みに設定しました。`);
+            alert(`${targetItems[0].name} を ${reqQty} 件使用済みに設定しました。`);
 
         } else if (mode === "bulk") {
             const targets = window.inventory.filter(item => window.selectedIds.has(String(item.id)));
@@ -979,10 +978,6 @@
         }
         window.closeUsedModal();
     };
-
-    function sampleNameText(item) {
-        return item ? item.name : "対象データ";
-    }
 
     window.openBulkEditModal = function() {
         if (window.selectedIds.size === 0) return;
