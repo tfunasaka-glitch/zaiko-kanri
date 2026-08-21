@@ -85,7 +85,7 @@
         .btn-bulk-del { background-color: #e53e3e; color: white; border: none; padding: 8px 14px; border-radius: 4px; }
 
         .table-responsive { overflow-x: auto; margin-top: 10px; position: relative; }
-        table { width: 100%; border-collapse: collapse; min-width: 1400px; }
+        table { width: 100%; border-collapse: collapse; min-width: 1450px; }
         th, td { padding: 12px; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 14px; }
         th { background-color: #34495e; color: white; position: sticky; top: 0; }
         
@@ -103,10 +103,18 @@
         tr.group-child-row td:first-child { padding-left: 20px; }
         .child-indent { display: inline-block; width: 15px; color: #cbd5e1; }
 
-        .badge { display: inline-block; padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: bold; text-align: center; }
+        /* バッジ表示の修正（つぶれ防止） */
+        .status-cell-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap; /* 改行を禁止 */
+        }
+
+        .badge { display: inline-block; padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: bold; text-align: center; white-space: nowrap; }
         .badge-keep { background-color: #d1fae5; color: #065f46; }
         .badge-used { background-color: #e2e8f0; color: #475569; }
-        .badge-count { background-color: #3b82f6; color: white; border-radius: 10px; padding: 2px 8px; font-size: 12px; margin-left: 5px; }
+        .badge-count { background-color: #3b82f6; color: white; border-radius: 10px; padding: 2px 8px; font-size: 12px; white-space: nowrap; }
 
         tr.status-used { background-color: #f8fafc; color: #64748b; }
         tr.status-used td strong { color: #64748b; }
@@ -289,8 +297,8 @@
                     <th style="width: 40px;" class="no-print">
                         <input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll(this)">
                     </th>
-                    <th style="width: 100px;">管理ID</th>
-                    <th style="width: 90px;">状況</th>
+                    <th style="width: 140px;">管理ID</th>
+                    <th style="width: 140px;">状況</th>
                     <th>法人名</th>
                     <th>商品名</th>
                     <th>部材(分類)</th>
@@ -491,20 +499,16 @@
         renderInventory();
     };
 
-    // ① 同一データまとめ表示用キー生成関数
     function generateItemSignature(item) {
         if (item.plan === "使用済み") {
-            // 使用済みは個別管理の価値が高いため、個別キー（統合しない）
             return `USED_${item.id}`;
         }
         return `${item.company || ''}_${item.name || ''}_${item.category || ''}_${item.model || ''}_${item.store || ''}_${item.date || ''}_${item.plan || ''}_${item.notes || ''}`;
     }
 
-    // ---------------------------------------------------------
-    // ② ドラッグ＆ドロップ（ドラッグ選択）機能の実装
-    // ---------------------------------------------------------
+    // ドラッグ＆ドロップ（ドラッグ選択）機能
     let isMouseDown = false;
-    let dragSelectState = true; // ドラッグ開始時にチェックを入れるか外すか
+    let dragSelectState = true;
 
     const tableContainer = document.getElementById('tableContainer');
 
@@ -571,9 +575,6 @@
         bar.style.display = window.selectedIds.size > 0 ? 'flex' : 'none';
     }
 
-    // ---------------------------------------------------------
-    // 一覧レンダリング処理
-    // ---------------------------------------------------------
     window.renderInventory = function() {
         const tbody = document.getElementById("inventoryBody");
         const noData = document.getElementById("noDataMessage");
@@ -604,7 +605,6 @@
             noData.style.display = "none";
 
             if (window.currentViewMode === 'normal') {
-                // ① まったく同じデータを自動統合して表示するモード
                 const sameGroups = {};
                 filteredList.forEach(item => {
                     const sig = generateItemSignature(item);
@@ -617,7 +617,6 @@
                     if (items.length === 1) {
                         tbody.appendChild(createRowElement(items[0]));
                     } else {
-                        // 複数件ある場合は親まとめ行を作成
                         const parentTr = createSameGroupParentRow(sig, items);
                         tbody.appendChild(parentTr);
 
@@ -630,7 +629,6 @@
                     }
                 });
             } else if (window.currentViewMode === 'category' || window.currentViewMode === 'company') {
-                // 分類・法人名まとめモード
                 const groupKey = window.currentViewMode === 'category' ? 'category' : 'company';
                 const groups = {};
 
@@ -669,7 +667,6 @@
                     }
                 });
             } else {
-                // 全件フラット表示モード
                 filteredList.forEach(item => { tbody.appendChild(createRowElement(item)); });
             }
         }
@@ -678,7 +675,6 @@
         updateBulkBar();
     };
 
-    // まとめ親行の生成
     function createSameGroupParentRow(sig, items) {
         const tr = document.createElement("tr");
         tr.className = "group-parent-row";
@@ -686,7 +682,6 @@
         const icon = isOpen ? "▼" : "▶";
         const sample = items[0];
 
-        // 枝番のID範囲表示 (例: 101-1 〜 101-3)
         const idList = items.map(i => i.id);
         const displayId = `${idList[0]} 〜 ${idList[idList.length - 1]}`;
 
@@ -696,7 +691,6 @@
             }
         };
 
-        // 親行のチェックボックス判定（子要素がすべて選択されているか）
         const allSelected = items.every(i => window.selectedIds.has(String(i.id)));
 
         tr.innerHTML = `
@@ -707,7 +701,12 @@
                 <span class="toggle-icon">${icon}</span>
                 <strong>${escapeHtml(displayId)}</strong>
             </td>
-            <td><span class="badge badge-keep">保管中</span> <span class="badge-count">全 ${items.length} 件</span></td>
+            <td>
+                <div class="status-cell-wrapper">
+                    <span class="badge badge-keep">保管中</span>
+                    <span class="badge-count">${items.length} 件</span>
+                </div>
+            </td>
             <td><strong>${escapeHtml(sample.company || '-')}</strong></td>
             <td><strong>${escapeHtml(sample.name)}</strong></td>
             <td>${escapeHtml(sample.category || '-')}</td>
@@ -725,7 +724,6 @@
         return tr;
     }
 
-    // まとめ親行からの全選択
     window.toggleSameGroupSelect = function(sig, isChecked) {
         const sameGroups = getSameGroupsMap();
         const items = sameGroups[sig] || [];
@@ -773,7 +771,11 @@
                 <input type="checkbox" class="item-checkbox" data-id="${strId}" ${isChecked ? 'checked' : ''} onchange="window.handleCheckboxChange(this, '${strId}')">
             </td>
             <td>${isChild ? '<span class="child-indent">└</span>' : ''}<strong>${escapeHtml(strId)}</strong></td>
-            <td>${statusBadge}</td>
+            <td>
+                <div class="status-cell-wrapper">
+                    ${statusBadge}
+                </div>
+            </td>
             <td><strong>${escapeHtml(item.company || '-')}</strong></td>
             <td><strong>${escapeHtml(item.name)}</strong></td>
             <td>${escapeHtml(item.category || '-')}</td>
