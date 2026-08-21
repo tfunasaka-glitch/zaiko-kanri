@@ -246,7 +246,7 @@
             
             <div class="summary-control no-print">
                 <label class="display-option">
-                    <input type="checkbox" id="showUsedCheckbox" onchange="renderInventory()" checked> 使用済みデータも表示する
+                    <input type="checkbox" id="showUsedCheckbox" onchange="renderInventory()"> 使用済みデータも表示する
                 </label>
 
                 <label for="summaryKeySelect">集計の基準項目:</label>
@@ -635,6 +635,13 @@
             });
         }
 
+        // ★ソート処理: 「保管中」を上部、「使用済み」を最下部に配置★
+        filteredList.sort((a, b) => {
+            const isAUsed = a.plan === "使用済み" ? 1 : 0;
+            const isBUsed = b.plan === "使用済み" ? 1 : 0;
+            return isAUsed - isBUsed;
+        });
+
         if (filteredList.length === 0) {
             noData.style.display = "block";
         } else {
@@ -648,7 +655,14 @@
                     sameGroups[sig].push(item);
                 });
 
-                Object.keys(sameGroups).forEach(sig => {
+                // グループ自体のソート（保管中グループ ➔ 使用済みグループ）
+                const sortedSigs = Object.keys(sameGroups).sort((a, b) => {
+                    const isAUsed = a.startsWith('USED_') ? 1 : 0;
+                    const isBUsed = b.startsWith('USED_') ? 1 : 0;
+                    return isAUsed - isBUsed;
+                });
+
+                sortedSigs.forEach(sig => {
                     const items = sameGroups[sig];
                     if (items.length === 1) {
                         tbody.appendChild(createRowElement(items[0]));
@@ -658,7 +672,6 @@
 
                         const isOpen = !!window.expandedSameGroups[sig];
                         if (isOpen) {
-                            // ★使用済みデータは自動的に除外して保管中データのみ展開する★
                             const activeItems = items.filter(i => i.plan !== "使用済み");
                             activeItems.forEach(childItem => {
                                 tbody.appendChild(createRowElement(childItem, true));
@@ -701,6 +714,8 @@
                     tbody.appendChild(headerTr);
 
                     if (isOpen) {
+                        // グループ内も「保管中」優先でソート
+                        groups[gName].sort((a, b) => (a.plan === "使用済み" ? 1 : 0) - (b.plan === "使用済み" ? 1 : 0));
                         groups[gName].forEach(item => { tbody.appendChild(createRowElement(item)); });
                     }
                 });
